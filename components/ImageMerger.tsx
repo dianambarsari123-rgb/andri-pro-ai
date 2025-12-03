@@ -1,9 +1,13 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Plus, Wand2, Sparkles, AlertCircle, ArrowLeft, ArrowRight, ImagePlus, Video, Settings2, RefreshCw, FileDown, History, Clock, Trash2, Maximize2, Download, Monitor, Check, ZoomIn, ZoomOut, RotateCcw, Users } from 'lucide-react';
+import { Upload, X, Plus, Wand2, Sparkles, AlertCircle, ArrowLeft, ArrowRight, ImagePlus, Video, Settings2, RefreshCw, FileDown, History, Clock, Trash2, Maximize2, Download, Monitor, Check, ZoomIn, ZoomOut, RotateCcw, Users, Link as LinkIcon, FileAudio, FileVideo, Info, BookOpen, Zap } from 'lucide-react';
 import { UploadedImage, AspectRatio, FeatureConfig, FeatureMode, HistoryItem } from '../types';
-import { generateImage, generateVideo, generateBatchImages } from '../services/geminiService';
+import { generateImage, generateVideo, generateBatchImages, enhancePrompt } from '../services/geminiService';
 import { faceSwap } from '../services/huggingfaceService';
+import { generateWithPollinations } from '../services/pollinationsService';
+import { processVideoLink, DownloadResult } from '../services/downloaderService';
 import { FeatureExample } from './FeatureExamples';
+import { PromptLibrary } from './PromptLibrary';
 
 interface ImageMergerProps {
   feature: FeatureConfig;
@@ -27,6 +31,9 @@ const getImageLabel = (index: number, mode: FeatureMode) => {
   if (mode === 'veo') {
     return index === 0 ? 'Referensi Awal' : `Ref #${index + 1}`;
   }
+  if (mode === 'removebg' || mode === 'removeobj') {
+    return 'Foto Asli';
+  }
   return `#${index + 1}`;
 };
 
@@ -35,7 +42,12 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
   const [prompt, setPrompt] = useState<string>(feature.defaultPrompt);
   const [ratio, setRatio] = useState<AspectRatio>(AspectRatio.SQUARE);
   const [loading, setLoading] = useState(false);
-  
+  const [enhancing, setEnhancing] = useState(false); // New state for Magic Prompt
+  const [showPromptLib, setShowPromptLib] = useState(false); // New state for Prompt Library
+
+  // AI Engine Selection (Gemini vs Pollinations)
+  const [aiEngine, setAiEngine] = useState<'gemini' | 'pollinations'>('gemini');
+
   // Results can now be an array (for images) or single string (video)
   const [generatedResults, setGeneratedResults] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +69,19 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+  // Downloader Specific State
+  const [downloadUrlInput, setDownloadUrlInput] = useState('');
+  const [downloadFormat, setDownloadFormat] = useState('mp4-1080p');
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadResult, setDownloadResult] = useState<DownloadResult | null>(null);
+
+  // Generation Progress Tracking
+  const [genProgress, setGenProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isVideoMode = feature.type === 'video';
+  const isDownloaderMode = feature.type === 'downloader';
+  const isTextToImage = feature.id === 'imagine' || feature.id === 'banana'; // Hide upload if imagine mode
 
   // Load history from localStorage on mount
   useEffect(() => {
@@ -79,824 +102,922 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
     setGeneratedResults([]);
     setError(null);
     setRatio(AspectRatio.SQUARE); // Default
+    
+    // Default engine: Pollinations for 'banana', Gemini for others
+    if (feature.id === 'banana') {
+        setAiEngine('pollinations');
+    } else {
+        setAiEngine('gemini');
+    }
+    
+    // Downloader reset
+    setDownloadUrlInput('');
+    setDownloadProgress(0);
+    setDownloadResult(null);
+    setGenProgress({ current: 0, total: 0 });
+
     if (isVideoMode) {
         setRatio(AspectRatio.LANDSCAPE); // Video prefers 16:9
         setVideoQuality('1080p'); // Default video quality
     }
   }, [feature, isVideoMode]);
 
-  // Reset zoom when preview opens/closes
+  // Lock body scroll when preview is open
   useEffect(() => {
-    if (!previewImage) {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
+    if (previewImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
+    return () => {
+       document.body.style.overflow = 'unset';
+    };
   }, [previewImage]);
 
-  const saveHistory = (results: string[]) => {
-    if (results.length === 0) return;
-
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      mode: feature.id,
-      prompt: prompt,
-      results: results,
-      thumbnail: results[0],
-      type: feature.type || 'image'
-    };
-
-    const updatedHistory = [newItem, ...history];
-    
-    // Keep max 10 items to prevent LocalStorage quota limits (Base64 is heavy)
-    if (updatedHistory.length > 10) {
-      updatedHistory.pop();
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    if (val.length <= MAX_PROMPT_LENGTH) {
+      setPrompt(val);
+      setError(null);
     }
+  };
 
-    setHistory(updatedHistory);
+  const handleMagicPrompt = async () => {
+    if (!prompt.trim()) return;
+    setEnhancing(true);
     try {
-      localStorage.setItem('andri_ai_history', JSON.stringify(updatedHistory));
+      const enhanced = await enhancePrompt(prompt);
+      setPrompt(enhanced);
     } catch (e) {
-      console.warn("LocalStorage full, could not save history item");
+      // ignore
+    } finally {
+      setEnhancing(false);
     }
-  };
-
-  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = history.filter(item => item.id !== id);
-    setHistory(updated);
-    localStorage.setItem('andri_ai_history', JSON.stringify(updated));
-  };
-
-  const restoreHistoryItem = (item: HistoryItem) => {
-    setPrompt(item.prompt);
-    setGeneratedResults(item.results);
-    // Note: We cannot restore input images file objects, so we just restore the result view
-    // Switch to the correct mode if needed (though UI handles current mode)
-    setShowHistory(false);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (images.length >= feature.maxImages) {
-        setError(`Maksimal ${feature.maxImages} gambar untuk fitur ini.`);
-        return;
-      }
-
-      const newImages: UploadedImage[] = Array.from(e.target.files).map((file) => ({
+      const newImages = Array.from(e.target.files).map((file: File) => ({
         id: Math.random().toString(36).substr(2, 9),
-        file: file as File,
-        previewUrl: URL.createObjectURL(file as File)
+        file,
+        previewUrl: URL.createObjectURL(file),
       }));
-
-      // Combine and slice to ensure max limit
-      const remainingSlots = feature.maxImages - images.length;
-      const imagesToAdd = newImages.slice(0, remainingSlots);
-      
-      setImages([...images, ...imagesToAdd]);
-      setError(null);
-      
-      // Reset input
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setImages((prev) => [...prev, ...newImages]);
     }
   };
 
   const removeImage = (id: string) => {
-    setImages(images.filter(img => img.id !== id));
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   const moveImage = (index: number, direction: 'left' | 'right') => {
+    if (direction === 'left' && index === 0) return;
+    if (direction === 'right' && index === images.length - 1) return;
+    
     const newImages = [...images];
-    if (direction === 'left' && index > 0) {
-      [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
-    } else if (direction === 'right' && index < newImages.length - 1) {
-      [newImages[index + 1], newImages[index]] = [newImages[index], newImages[index + 1]];
-    }
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    [newImages[index], newImages[targetIndex]] = [newImages[targetIndex], newImages[index]];
     setImages(newImages);
   };
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    if (text.length <= MAX_PROMPT_LENGTH) {
-      setPrompt(text);
-      if (error === "Silakan masukkan instruksi.") {
-        setError(null);
-      }
-    }
-  };
-
-  const handleDownloadInputs = () => {
-    if (images.length === 0) return;
-    images.forEach((img, index) => {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(img.file);
-        link.download = img.file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, index * 500);
-    });
-  };
-
-  // Function to resize/upscale image via Canvas for "HD/FHD/UHD" download simulation
-  const handleSmartDownload = (url: string, quality: 'HD' | 'FHD' | 'UHD') => {
-    setDownloadingQuality(quality);
-    
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = url;
-    
-    img.onload = () => {
-        let targetSize = 1280; // HD default
-        if (quality === 'FHD') targetSize = 1920;
-        if (quality === 'UHD') targetSize = 3840; // 4K
-
-        // Calculate aspect ratio
-        const aspectRatio = img.width / img.height;
-        let newWidth, newHeight;
-
-        if (img.width > img.height) {
-            newWidth = targetSize;
-            newHeight = targetSize / aspectRatio;
-        } else {
-            newHeight = targetSize;
-            newWidth = targetSize * aspectRatio;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-        const ctx = canvas.getContext('2d');
-        
-        if (ctx) {
-            // Use better interpolation if browser supports it
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
-            
-            const dataUrl = canvas.toDataURL('image/png', 1.0);
-            const link = document.createElement('a');
-            link.download = `Andri-AI-${quality}-${Date.now()}.png`;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        setDownloadingQuality(null);
-    };
-
-    img.onerror = () => {
-        alert("Gagal memproses gambar.");
-        setDownloadingQuality(null);
-    };
-  };
-
+  // Main Generation Handler
   const handleGenerate = async () => {
     if (images.length < feature.minImages) {
-      setError(`Silakan unggah minimal ${feature.minImages} gambar untuk melanjutkan.`);
+      setError(`Minimal upload ${feature.minImages} gambar untuk fitur ini.`);
       return;
     }
-    
-    // For specific modes, prompt is optional or used differently, but checking basic length is good
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt && feature.id !== 'faceswap') { 
-      // Face Swap can technically work with images only, but strict check for others
-      setError("Silakan masukkan instruksi.");
+    if (images.length > feature.maxImages && feature.maxImages > 0) {
+      setError(`Maksimal upload ${feature.maxImages} gambar.`);
       return;
     }
-
-    if (trimmedPrompt.length > MAX_PROMPT_LENGTH) {
-      setError(`Instruksi terlalu panjang. Maksimal ${MAX_PROMPT_LENGTH} karakter.`);
-      return;
+    if (!prompt.trim()) {
+       setError("Instruksi tidak boleh kosong.");
+       return;
     }
 
     setLoading(true);
     setError(null);
     setGeneratedResults([]);
+    setGenProgress({ current: 0, total: 0 });
 
     try {
       let results: string[] = [];
-      
-      if (feature.id === 'faceswap') {
-        // --- SPECIAL CASE: FACE SWAP USING HUGGING FACE ---
-        // Requires exactly 2 images: Source Face (0) and Target Body (1)
-        if (images.length < 2) throw new Error("Face Swap memerlukan 2 gambar (Wajah & Target).");
-        
-        // Call dedicated Face Swap Service
-        const resultUrl = await faceSwap(images[0].file, images[1].file);
-        results = [resultUrl];
 
+      if (feature.id === 'faceswap') {
+        const res = await faceSwap(images[0].file, images[1].file);
+        results = [res];
       } else if (isVideoMode) {
-        // --- VIDEO GENERATION ---
-        // Video generation (Single Result)
-        const videoUrl = await generateVideo(trimmedPrompt, images, ratio, videoQuality);
+        const videoUrl = await generateVideo(prompt, images, ratio, feature.id, videoQuality);
         results = [videoUrl];
+      } else if (aiEngine === 'pollinations' && isTextToImage) {
+        // --- POLLINATIONS (FLUX) GENERATION ---
+        setGenProgress({ current: 0, total: 4 });
+        
+        // Determine dimensions based on ratio
+        let w = 1024, h = 1024;
+        if (ratio === AspectRatio.LANDSCAPE) { w = 1280; h = 720; }
+        else if (ratio === AspectRatio.PORTRAIT) { w = 720; h = 1280; }
+        else if (ratio === AspectRatio.PORTRAIT_4_5) { w = 864; h = 1080; }
+        else if (ratio === AspectRatio.LANDSCAPE_5_4) { w = 1080; h = 864; }
+
+        // Generate 4 in parallel for speed
+        const promises = Array(4).fill(0).map((_, idx) => 
+            generateWithPollinations(prompt, w, h).then(res => {
+                setGenProgress(prev => ({ ...prev, current: prev.current + 1 }));
+                return res;
+            })
+        );
+        results = await Promise.all(promises);
 
       } else {
-        // --- STANDARD IMAGE GENERATION (GEMINI) ---
-        // We use generateBatchImages to get 4 variations
-        results = await generateBatchImages(trimmedPrompt, images, ratio, feature.id, 4);
+        // --- GEMINI GENERATION ---
+        results = await generateBatchImages(
+          prompt, 
+          images, 
+          ratio, 
+          feature.id, 
+          4,
+          (current, total) => {
+             setGenProgress({ current, total });
+          }
+        );
       }
-
+      
       setGeneratedResults(results);
-      saveHistory(results);
+
+      // Save to History
+      const newHistoryItem: HistoryItem = {
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        mode: feature.id,
+        prompt: prompt,
+        results: results,
+        thumbnail: results[0],
+        type: feature.type || 'image'
+      };
+
+      const updatedHistory = [newHistoryItem, ...history].slice(50); // Limit 50 items
+      setHistory(updatedHistory);
+      localStorage.setItem('andri_ai_history', JSON.stringify(updatedHistory));
 
     } catch (err: any) {
-      setError(err.message || "Terjadi kesalahan saat memproses permintaan.");
+      const errorMsg = err.message || 'Gagal memproses permintaan.';
+      
+      // SUPPRESS NOTIFICATION: Filter out permission denied errors
+      const isPermissionError = 
+         errorMsg.toLowerCase().includes('permission') || 
+         errorMsg.toLowerCase().includes('izin') || 
+         errorMsg.includes('403');
+
+      if (!isPermissionError) {
+         setError(errorMsg);
+      } else {
+         console.warn("Suppressed permission error notification:", errorMsg);
+      }
     } finally {
       setLoading(false);
+      setGenProgress({ current: 0, total: 0 });
     }
   };
 
-  // Zoom handlers
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.5, 5)); // Max 5x
+  // Video Downloader Logic
+  const handleConvertVideo = async () => {
+     if(!downloadUrlInput.trim()) {
+        setError("Silakan masukkan URL video terlebih dahulu.");
+        return;
+     }
+     
+     setLoading(true);
+     setError(null);
+     setDownloadProgress(0);
+     setDownloadResult(null);
+
+     try {
+        const result = await processVideoLink(
+           downloadUrlInput, 
+           feature.id, // e.g., 'youtube', 'tiktok'
+           downloadFormat,
+           (progress) => setDownloadProgress(progress)
+        );
+        setDownloadResult(result);
+     } catch (err: any) {
+        setError(err.message || "Gagal mengkonversi video.");
+     } finally {
+        setLoading(false);
+     }
   };
 
-  const handleZoomOut = () => {
-    setZoom((prev) => {
-      const newZoom = Math.max(prev - 0.5, 1);
-      if (newZoom === 1) setPan({ x: 0, y: 0 }); // Reset pan if zoomed out fully
-      return newZoom;
-    });
-  };
 
-  const handleResetZoom = () => {
+  const openPreview = (url: string) => {
+    setPreviewImage(url);
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
 
-  // Pan handlers
-  const onMouseDown = (e: React.MouseEvent) => {
+  const handleDownload = async (url: string, quality: 'HD' | 'FHD' | 'UHD' = 'HD') => {
+    if (isVideoMode) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    try {
+      setDownloadingQuality(quality);
+      
+      let scaleFactor = 1;
+      if (quality === 'FHD') scaleFactor = 2;
+      if (quality === 'UHD') scaleFactor = 4;
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await new Promise(resolve => { img.onload = resolve; });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scaleFactor;
+      canvas.height = img.height * scaleFactor;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("Canvas context failed");
+      
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `AndriAI-Pro-${feature.id}-${Date.now()}-${quality}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (e) {
+      console.error("Download failed", e);
+      alert("Gagal mendownload gambar.");
+    } finally {
+      setDownloadingQuality(null);
+    }
+  };
+
+  const handleDownloadInputs = async () => {
+      for (const img of images) {
+         const link = document.createElement('a');
+         link.href = img.previewUrl;
+         link.download = img.file.name;
+         document.body.appendChild(link);
+         link.click();
+         document.body.removeChild(link);
+         await new Promise(r => setTimeout(r, 500));
+      }
+  };
+
+  // Zoom Pan Logic
+  const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
+    const scaleAmount = -e.deltaY * 0.001;
+    const newZoom = Math.min(Math.max(1, zoom + scaleAmount), 5);
+    setZoom(newZoom);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (zoom > 1) {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-      e.preventDefault(); // Prevent default drag behavior
     }
   };
 
-  const onMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && zoom > 1) {
-      const newX = e.clientX - dragStart.x;
-      const newY = e.clientY - dragStart.y;
-      setPan({ x: newX, y: newY });
+      e.preventDefault();
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
     }
   };
 
-  const onMouseUp = () => {
+  const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  const onMouseLeave = () => {
-    setIsDragging(false);
+  const restoreHistory = (item: HistoryItem) => {
+    if (item.mode !== feature.id) {
+       alert("Item history ini berasal dari mode fitur yang berbeda.");
+       return;
+    }
+    setPrompt(item.prompt);
+    setGeneratedResults(item.results);
+    setShowHistory(false);
+  };
+
+  const clearHistory = () => {
+    if(confirm("Hapus semua history?")) {
+        setHistory([]);
+        localStorage.removeItem('andri_ai_history');
+    }
   };
 
   return (
-    <div className="max-w-5xl mx-auto pb-20 animate-in fade-in duration-500 relative">
+    <div className="max-w-5xl mx-auto pb-10">
       
-      {/* PREVIEW MODAL */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
-           <div className="relative w-full max-w-5xl h-full max-h-[90vh] flex flex-col items-center">
-              
-              {/* Toolbar */}
-              <div className="absolute top-0 right-0 p-4 flex gap-4 z-50">
-                 <button 
-                   onClick={() => setPreviewImage(null)}
-                   className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-full backdrop-blur-md transition-all"
-                 >
-                   <X size={24} />
-                 </button>
-              </div>
-
-              {/* Main Image with Zoom/Pan */}
-              <div className="flex-1 w-full flex items-center justify-center overflow-hidden mb-6 relative bg-black/20 rounded-lg">
-                <div 
-                  className={`relative w-full h-full flex items-center justify-center overflow-hidden ${zoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                  onMouseDown={onMouseDown}
-                  onMouseMove={onMouseMove}
-                  onMouseUp={onMouseUp}
-                  onMouseLeave={onMouseLeave}
-                >
-                    <img 
-                      src={previewImage} 
-                      alt="Full Preview" 
-                      draggable={false}
-                      style={{ 
-                        transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
-                      }}
-                      className="max-w-full max-h-full object-contain" 
-                    />
-                </div>
-
-                {/* Zoom Controls */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md p-2 rounded-full border border-white/10 shadow-xl z-40">
-                    <button 
-                      onClick={handleZoomOut}
-                      className="p-2 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-50"
-                      disabled={zoom <= 1}
-                      title="Zoom Out"
-                    >
-                      <ZoomOut size={20} />
-                    </button>
-                    <span className="text-xs font-mono text-white min-w-[3rem] text-center">{Math.round(zoom * 100)}%</span>
-                    <button 
-                      onClick={handleZoomIn}
-                      className="p-2 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-50"
-                      disabled={zoom >= 5}
-                      title="Zoom In"
-                    >
-                      <ZoomIn size={20} />
-                    </button>
-                    <div className="w-px h-6 bg-white/20 mx-1"></div>
-                    <button 
-                      onClick={handleResetZoom}
-                      className="p-2 hover:bg-white/20 rounded-full text-white transition-colors"
-                      title="Reset View"
-                    >
-                      <RotateCcw size={18} />
-                    </button>
-                </div>
-              </div>
-
-              {/* Download Options */}
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-2xl w-full max-w-2xl">
-                 <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                    <Download className="text-emerald-400" size={20} /> Pilih Kualitas Download
-                 </h3>
-                 <div className="grid grid-cols-3 gap-4">
-                    <button 
-                      onClick={() => handleSmartDownload(previewImage, 'HD')}
-                      disabled={!!downloadingQuality}
-                      className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 rounded-xl transition-all group"
-                    >
-                       <span className="text-2xl font-bold text-white mb-1 group-hover:text-emerald-400">HD</span>
-                       <span className="text-xs text-slate-400">1280px</span>
-                       {downloadingQuality === 'HD' && <div className="mt-2 w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>}
-                    </button>
-
-                    <button 
-                      onClick={() => handleSmartDownload(previewImage, 'FHD')}
-                      disabled={!!downloadingQuality}
-                      className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl transition-all group"
-                    >
-                       <span className="text-2xl font-bold text-white mb-1 group-hover:text-blue-400">FHD</span>
-                       <span className="text-xs text-slate-400">1920px</span>
-                       {downloadingQuality === 'FHD' && <div className="mt-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
-                    </button>
-
-                    <button 
-                      onClick={() => handleSmartDownload(previewImage, 'UHD')}
-                      disabled={!!downloadingQuality}
-                      className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 rounded-xl transition-all group"
-                    >
-                       <div className="flex items-center gap-1 mb-1">
-                          <span className="text-2xl font-bold text-white group-hover:text-purple-400">UHD</span>
-                          <span className="bg-purple-500 text-white text-[9px] font-bold px-1 rounded">4K</span>
-                       </div>
-                       <span className="text-xs text-slate-400">3840px</span>
-                       {downloadingQuality === 'UHD' && <div className="mt-2 w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>}
-                    </button>
-                 </div>
-              </div>
-
-           </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 animate-in slide-in-from-top-4 duration-500">
+        <div>
+          <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+               {feature.icon || <Sparkles size={24} />}
+             </div>
+             <span>{feature.title}</span>
+          </h2>
+          <p className="text-slate-400 dark:text-slate-400 mt-2 text-lg">{feature.description}</p>
         </div>
-      )}
-      
-      {/* History Toggle Button */}
-      <button 
-        onClick={() => setShowHistory(!showHistory)}
-        className="fixed bottom-6 left-6 md:top-24 md:left-auto md:right-10 z-40 bg-white text-slate-700 shadow-xl p-3 rounded-full border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2 group"
-      >
-        <History size={20} className="text-emerald-600" />
-        <span className="font-bold text-sm hidden group-hover:block whitespace-nowrap pr-2">Riwayat</span>
-        {history.length > 0 && (
-           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-             {history.length}
-           </span>
+        
+        {!isDownloaderMode && (
+          <button 
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-medium transition-colors shadow-sm"
+          >
+            <History size={18} /> Riwayat
+          </button>
         )}
-      </button>
-
-      {/* History Sidebar/Drawer */}
-      {showHistory && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-50 p-6 overflow-y-auto animate-in slide-in-from-right border-l border-slate-100">
-           <div className="flex justify-between items-center mb-6">
-             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-               <Clock size={18} className="text-emerald-500" /> Riwayat Generasi
-             </h3>
-             <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600">
-               <X size={20} />
-             </button>
-           </div>
-           
-           <div className="space-y-4">
-             {history.length === 0 ? (
-               <div className="text-center py-10 text-slate-400 text-sm">
-                 Belum ada riwayat.
-               </div>
-             ) : (
-               history.map((item) => (
-                 <div key={item.id} className="bg-slate-50 rounded-xl p-3 border border-slate-100 hover:border-emerald-200 transition-colors group cursor-pointer" onClick={() => restoreHistoryItem(item)}>
-                    <div className="flex justify-between items-start mb-2">
-                       <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
-                         {item.mode}
-                       </span>
-                       <button onClick={(e) => deleteHistoryItem(item.id, e)} className="text-slate-300 hover:text-red-500">
-                         <Trash2 size={14} />
-                       </button>
-                    </div>
-                    {item.type === 'video' ? (
-                       <div className="aspect-video bg-black rounded-lg mb-2 flex items-center justify-center text-white">
-                         <Video size={20} />
-                       </div>
-                    ) : (
-                       <img src={item.thumbnail} alt="History" className="w-full h-32 object-cover rounded-lg mb-2 bg-slate-200" />
-                    )}
-                    <p className="text-xs text-slate-600 line-clamp-2 italic">"{item.prompt}"</p>
-                    <div className="text-[10px] text-slate-400 mt-2 text-right">
-                      {new Date(item.timestamp).toLocaleTimeString()}
-                    </div>
-                 </div>
-               ))
-             )}
-           </div>
-        </div>
-      )}
-      
-      {/* Feature Header */}
-      <header className="mb-8 text-center">
-         <h2 className="text-3xl md:text-4xl font-bold text-emerald-500 tracking-tight mb-2 flex items-center justify-center gap-3">
-           {isVideoMode ? <Video size={36} /> : null}
-           {feature.title}
-         </h2>
-         <p className="text-slate-500 max-w-2xl mx-auto">{feature.description}</p>
-      </header>
-
-      {/* Example Showcase (Before / After) */}
-      <FeatureExample mode={feature.id} />
-
-      {/* Info Banner */}
-      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 mb-6 flex items-start gap-3">
-        <div className="bg-emerald-100 p-1 rounded-full text-emerald-600 mt-0.5">
-          <Wand2 size={16} />
-        </div>
-        <p className="text-emerald-800 text-sm leading-relaxed">
-          {feature.id === 'faceswap' 
-             ? "Mode Face Swap menggunakan Engine InsightFace khusus untuk kemiripan maksimal. Proses mungkin memakan waktu tergantung antrean server."
-             : isVideoMode 
-             ? "Pembuatan video memerlukan waktu beberapa menit. Browser Anda mungkin akan meminta izin untuk menggunakan API Key berbayar."
-             : feature.minImages > 0 
-                ? `Unggah ${feature.minImages}-${feature.maxImages} gambar, tulis instruksi, dan AI akan membuat 4 variasi sekaligus.` 
-                : "Tulis instruksi detail untuk membuat 4 variasi gambar baru dari awal."}
-        </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        
-        <div className="p-6 space-y-8">
-          
-          {/* Step 1: Upload (Only if maxImages > 0) */}
-          {feature.maxImages > 0 && (
-            <div>
-              <div className="flex justify-between items-end mb-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  1. Unggah {isVideoMode ? "Referensi (Opsional)" : "Gambar"} <span className="text-sm font-normal text-slate-500">(min {feature.minImages}, maks {feature.maxImages})</span>
-                </h3>
-                <span className="text-xs text-slate-400">
-                  {images.length} / {feature.maxImages} terunggah
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {images.map((img, index) => (
-                  <div key={img.id} className="group relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm transition-all hover:shadow-md aspect-[4/5]">
-                    {/* Image Preview */}
-                    <img src={img.previewUrl} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" />
-                    
-                    {/* Label Badge (Context Aware) */}
-                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] uppercase font-bold px-2 py-1 rounded-md border border-white/10 shadow-sm">
-                      {getImageLabel(index, feature.id)}
-                    </div>
+      {!isDownloaderMode && <FeatureExample mode={feature.id} />}
+      
+      {/* Prompt Library Modal */}
+      {showPromptLib && (
+        <PromptLibrary 
+          onSelect={(text) => {
+            setPrompt(text);
+            setShowPromptLib(false);
+          }} 
+          onClose={() => setShowPromptLib(false)} 
+        />
+      )}
 
-                    {/* Remove Button */}
-                    <button 
-                      onClick={() => removeImage(img.id)}
-                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-90 group-hover:scale-100"
-                    >
-                      <X size={14} />
-                    </button>
-
-                    {/* Reorder Controls */}
-                    {images.length > 1 && (
-                      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button 
-                          onClick={() => moveImage(index, 'left')}
-                          disabled={index === 0}
-                          className={`p-1.5 rounded-full shadow-lg backdrop-blur-md border border-white/20 ${index === 0 ? 'bg-slate-800/30 text-slate-400 cursor-not-allowed' : 'bg-slate-900/70 text-white hover:bg-slate-900'}`}
-                        >
-                          <ArrowLeft size={14} />
-                        </button>
-                        <button 
-                          onClick={() => moveImage(index, 'right')}
-                          disabled={index === images.length - 1}
-                          className={`p-1.5 rounded-full shadow-lg backdrop-blur-md border border-white/20 ${index === images.length - 1 ? 'bg-slate-800/30 text-slate-400 cursor-not-allowed' : 'bg-slate-900/70 text-white hover:bg-slate-900'}`}
-                        >
-                          <ArrowRight size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {/* Upload Button */}
-                {images.length < feature.maxImages && (
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="aspect-[4/5] rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition-all group"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3 group-hover:bg-emerald-100 transition-colors">
-                      <ImagePlus className="text-slate-400 group-hover:text-emerald-600" size={24} />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600 group-hover:text-emerald-700">Tambah Foto</span>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileChange} 
-                      className="hidden" 
-                      accept="image/*"
-                      multiple={feature.maxImages > 1}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Instruction */}
+      {/* Info Banner for Image Features */}
+      {!isDownloaderMode && !isTextToImage && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 mb-6 flex gap-4 items-start animate-in fade-in slide-in-from-top-2 backdrop-blur-md">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full shrink-0">
+             <Info size={18} />
+          </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex justify-between items-center">
-              <span>{feature.maxImages > 0 ? "2. Instruksi" : "1. Instruksi"}</span>
-              <span className="text-xs font-normal text-slate-400">
-                 {feature.id === 'faceswap' ? 'Opsional' : 'Wajib diisi'}
-              </span>
-            </h3>
-            <div className="relative">
-              <textarea
-                value={prompt}
-                onChange={handlePromptChange}
-                maxLength={MAX_PROMPT_LENGTH}
-                className={`w-full h-32 p-4 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none text-sm leading-relaxed transition-colors ${
-                    error === "Silakan masukkan instruksi." 
-                      ? 'border-red-500 bg-red-900/10 text-slate-800 placeholder:text-red-400' 
-                      : 'bg-slate-900 border-slate-700 text-emerald-50 placeholder:text-slate-500'
-                  }`}
-                placeholder={feature.id === 'faceswap' ? "Instruksi tidak diperlukan untuk Face Swap (Otomatis)." : isVideoMode ? "Deskripsikan video yang ingin dibuat..." : "Deskripsikan hasil yang Anda inginkan..."}
-              />
-              <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                 {/* Character Counter */}
-                 <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                     prompt.length >= MAX_PROMPT_LENGTH ? 'bg-red-500 text-white' : 
-                     prompt.length > MAX_PROMPT_LENGTH * 0.9 ? 'bg-amber-500 text-white' : 
-                     'bg-slate-800 text-slate-400 border border-slate-700'
-                 }`}>
-                    {prompt.length}/{MAX_PROMPT_LENGTH}
-                 </span>
-                 <div className="text-slate-400 bg-slate-800/80 backdrop-blur-sm p-1 rounded-md border border-slate-700">
-                    <Wand2 size={14} />
+             <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400 leading-relaxed">
+                Unggah <span className="font-bold">{feature.minImages}-{feature.maxImages > 0 ? feature.maxImages : '5'} gambar</span>, tulis instruksi, dan biarkan AI menggabungkannya menjadi sebuah karya baru yang unik.
+             </p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-[#0c0c0e] rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden relative">
+        
+        {loading && (
+           <div className="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+              <div className="relative mb-8">
+                 <div className="w-20 h-20 border-4 border-slate-100 dark:border-white/10 border-t-emerald-500 rounded-full animate-spin"></div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    {isDownloaderMode ? <Download className="text-emerald-500 animate-pulse" /> : <Sparkles className="text-emerald-500 animate-pulse" size={24} />}
                  </div>
               </div>
-            </div>
-          </div>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                 {isDownloaderMode ? 'Mengkonversi Video...' : 'Sedang Memproses...'}
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                 {isDownloaderMode 
+                    ? `Sedang mengambil data dari ${feature.title}... (${downloadProgress}%)` 
+                    : (feature.id === 'faceswap'
+                         ? "Menghubungkan ke Neural Network Face Swap... Mengaktifkan Face Enhancer untuk hasil maksimal (60-90 detik)."
+                         : isVideoMode 
+                           ? " Video rendering memakan waktu 1-2 menit." 
+                           : (aiEngine === 'pollinations'
+                                ? "Menghubungkan ke Flux/SDXL Engine... (Fast Generation)"
+                                : (genProgress.total > 0 
+                                    ? `Membuat variasi ${genProgress.current} dari ${genProgress.total}...` 
+                                    : "Estimasi waktu: 10-20 detik.")
+                             )
+                      )
+                 }
+              </p>
+              {(isDownloaderMode || (!isVideoMode && genProgress.total > 0)) && (
+                 <div className="w-64 h-2 bg-slate-100 dark:bg-white/10 rounded-full mt-4 overflow-hidden">
+                    <div 
+                        className="h-full bg-emerald-500 transition-all duration-300" 
+                        style={{ width: `${isDownloaderMode ? downloadProgress : (genProgress.current / genProgress.total) * 100}%` }}
+                    ></div>
+                 </div>
+              )}
+           </div>
+        )}
 
-          {/* Step 3: Ratio & Quality (For Video) */}
-          <div>
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Ratio Selection */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                  {feature.maxImages > 0 ? "3. Pilih Rasio" : "2. Pilih Rasio"}
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  {!isVideoMode && (
-                    <RatioOption 
-                        active={ratio === AspectRatio.SQUARE} 
-                        onClick={() => setRatio(AspectRatio.SQUARE)}
-                        label="1:1"
-                        icon={<div className="w-4 h-4 border-2 border-current rounded-sm" />}
-                    />
-                  )}
-                  <RatioOption 
-                    active={ratio === AspectRatio.LANDSCAPE} 
-                    onClick={() => setRatio(AspectRatio.LANDSCAPE)}
-                    label="16:9"
-                    icon={<div className="w-5 h-3 border-2 border-current rounded-sm" />}
-                  />
-                  <RatioOption 
-                    active={ratio === AspectRatio.PORTRAIT} 
-                    onClick={() => setRatio(AspectRatio.PORTRAIT)}
-                    label="9:16"
-                    icon={<div className="w-3 h-5 border-2 border-current rounded-sm" />}
-                  />
-                </div>
+        {isDownloaderMode ? (
+           <div className="p-8 md:p-12">
+              <div className="max-w-2xl mx-auto space-y-8">
+                 <div className="space-y-4">
+                    <label className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+                       <LinkIcon size={18} className="text-emerald-500" />
+                       Paste Link {feature.title.replace('Downloader','')}
+                    </label>
+                    <div className="relative">
+                       <input 
+                         type="text" 
+                         value={downloadUrlInput}
+                         onChange={(e) => setDownloadUrlInput(e.target.value)}
+                         className="w-full pl-4 pr-4 py-4 bg-slate-50 dark:bg-white/5 border-2 border-slate-200 dark:border-white/10 rounded-xl focus:border-emerald-500 outline-none transition-all text-slate-800 dark:text-white font-medium"
+                         placeholder={`Contoh: https://www.${feature.id}.com/watch?v=...`}
+                       />
+                       {downloadUrlInput && (
+                          <button onClick={() => setDownloadUrlInput('')} className="absolute right-4 top-4 text-slate-400 hover:text-red-500">
+                             <X size={20} />
+                          </button>
+                       )}
+                    </div>
+                 </div>
+                 
+                 <div className="space-y-4">
+                     <label className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+                        <Settings2 size={18} className="text-blue-500" />
+                        Pilih Format Output
+                     </label>
+                     <div className="grid grid-cols-3 gap-4">
+                        <button 
+                           onClick={() => setDownloadFormat('mp4-1080p')}
+                           className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${downloadFormat === 'mp4-1080p' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-white/10 text-slate-500 hover:border-emerald-200'}`}
+                        >
+                           <FileVideo size={24} />
+                           <span className="font-bold text-sm">MP4 1080p</span>
+                        </button>
+                        <button 
+                           onClick={() => setDownloadFormat('mp4-720p')}
+                           className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${downloadFormat === 'mp4-720p' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-white/10 text-slate-500 hover:border-emerald-200'}`}
+                        >
+                           <FileVideo size={24} />
+                           <span className="font-bold text-sm">MP4 720p</span>
+                        </button>
+                        <button 
+                           onClick={() => setDownloadFormat('mp3')}
+                           className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${downloadFormat === 'mp3' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-white/10 text-slate-500 hover:border-emerald-200'}`}
+                        >
+                           <FileAudio size={24} />
+                           <span className="font-bold text-sm">MP3 Audio</span>
+                        </button>
+                     </div>
+                 </div>
+
+                 <button
+                    onClick={handleConvertVideo}
+                    disabled={loading}
+                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                 >
+                    {loading ? 'Sedang Memproses...' : 'Convert & Download'}
+                 </button>
+                 
+                 {downloadResult && (
+                    <div className="mt-8 bg-slate-50 dark:bg-white/5 rounded-2xl p-6 border border-emerald-100 dark:border-white/10 animate-in slide-in-from-bottom-4">
+                       <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <Check className="text-emerald-500" /> Konversi Berhasil!
+                       </h3>
+                       <div className="flex gap-4">
+                          <img src={downloadResult.thumbnail} alt="Thumb" className="w-32 h-20 object-cover rounded-lg bg-slate-200" />
+                          <div className="flex-1 min-w-0">
+                             <div className="font-bold text-slate-800 dark:text-white truncate">{downloadResult.title}</div>
+                             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Format: {downloadResult.format.toUpperCase()} • Size: {downloadResult.size}
+                             </div>
+                             <button className="mt-3 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-colors flex items-center gap-2">
+                                <Download size={14} /> Download File
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+                 )}
               </div>
-
-              {/* Video Quality Selection (Only for Video) */}
-              {isVideoMode && (
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <Settings2 size={18} /> Kualitas Video
-                  </h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    <button
-                      onClick={() => setVideoQuality('720p')}
-                      className={`flex items-center justify-between px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        videoQuality === '720p'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700 ring-1 ring-purple-500'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>Standard 720p</span>
-                      <span className="text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600">Cepat</span>
-                    </button>
-                    <button
-                      onClick={() => setVideoQuality('1080p')}
-                      className={`flex items-center justify-between px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        videoQuality === '1080p'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700 ring-1 ring-purple-500'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>High 1080p</span>
-                      <span className="text-xs bg-blue-100 px-2 py-0.5 rounded text-blue-600">HD</span>
-                    </button>
-                    <button
-                      onClick={() => setVideoQuality('4k')}
-                      className={`flex items-center justify-between px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        videoQuality === '4k'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700 ring-1 ring-purple-500'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>Ultra Quality</span>
-                      <span className="text-xs bg-amber-100 px-2 py-0.5 rounded text-amber-600">Pro</span>
-                    </button>
+           </div>
+        ) : (
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:divide-x divide-slate-200 dark:divide-white/10">
+            
+            {/* Left: Inputs */}
+            <div className="p-8 bg-slate-50/50 dark:bg-white/5 space-y-8">
+              
+              {/* 1. Image Upload (Hidden for Imagine) */}
+              {!isTextToImage && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                       <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-white">1</div>
+                       Unggah Gambar 
+                       <span className="text-xs font-normal text-slate-400 ml-2">
+                         (Min {feature.minImages}, Maks {feature.maxImages})
+                       </span>
+                    </h3>
                   </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {images.map((img, index) => (
+                      <div key={img.id} className="relative aspect-square group rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 shadow-sm">
+                        <img src={img.previewUrl} alt={`Upload ${index}`} className="w-full h-full object-cover" />
+                        
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                           <button onClick={() => removeImage(img.id)} className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-sm">
+                             <X size={14} />
+                           </button>
+                        </div>
+
+                        {/* Order Controls */}
+                        {images.length > 1 && (
+                            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                               <button disabled={index === 0} onClick={() => moveImage(index, 'left')} className="p-1 bg-black/50 text-white rounded hover:bg-black/70 disabled:opacity-30"><ArrowLeft size={12}/></button>
+                               <button disabled={index === images.length - 1} onClick={() => moveImage(index, 'right')} className="p-1 bg-black/50 text-white rounded hover:bg-black/70 disabled:opacity-30"><ArrowRight size={12}/></button>
+                            </div>
+                        )}
+
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-1.5">
+                          <p className="text-[10px] font-medium text-center text-white truncate">
+                            {getImageLabel(index, feature.id)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {images.length < (feature.maxImages || 5) && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="aspect-square border-2 border-dashed border-slate-300 dark:border-white/20 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-emerald-500 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all group"
+                      >
+                        <div className="p-3 bg-white dark:bg-white/5 rounded-full mb-2 shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all">
+                           <Plus size={24} />
+                        </div>
+                        <span className="text-xs font-medium">Tambah Foto</span>
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                  />
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-
-          {/* Action Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 transform active:scale-[0.99]
-              ${loading 
-                ? 'bg-slate-400 cursor-not-allowed shadow-none' 
-                : feature.id === 'faceswap'
-                    ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 hover:shadow-blue-300'
-                    : isVideoMode 
-                        ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200 hover:shadow-purple-300'
-                        : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
-              }`}
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>
-                    {feature.id === 'faceswap' ? "Menukar Wajah (Antrean Server)..." : isVideoMode ? "Sedang Merender Video..." : "Sedang Memproses 4 Variasi..."}
-                </span>
-              </>
-            ) : (
-              <>
-                {feature.id === 'faceswap' ? <Users size={20} /> : isVideoMode ? <Video size={20} /> : <Sparkles size={20} />}
-                <span>
-                    {feature.id === 'faceswap' ? "Tukar Wajah Sekarang" : isVideoMode ? "Buat Video" : "Buat 4 Variasi Hasil"}
-                </span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Result Section (Grid for 4 images) */}
-      {generatedResults.length > 0 && (
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <Sparkles className="text-emerald-500" /> Hasil Andri AI ({generatedResults.length})
-          </h3>
-          
-          <div className={`grid gap-4 ${isVideoMode || generatedResults.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-            {generatedResults.map((result, idx) => (
-                <div key={idx} className="bg-slate-100 rounded-lg p-2 group relative">
-                    {isVideoMode ? (
-                        <video 
-                            controls 
-                            autoPlay 
-                            loop
-                            src={result} 
-                            className="w-full rounded-lg shadow-md"
-                        >
-                            Browser Anda tidak mendukung tag video.
-                        </video>
-                    ) : (
-                        <div className="relative cursor-zoom-in" onClick={() => setPreviewImage(result)}>
-                            <img 
-                                src={result} 
-                                alt={`Result ${idx + 1}`} 
-                                className="w-full h-auto rounded-lg shadow-md hover:opacity-95 transition-opacity" 
-                            />
-                            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                  className="bg-white text-slate-800 p-1.5 rounded-full shadow-lg hover:bg-emerald-500 hover:text-white transition-colors"
-                                  title="Pratinjau & Download"
-                                >
-                                    <Maximize2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+              {/* 2. Prompt Input */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-white">{isTextToImage ? '1' : '2'}</div>
+                    Instruksi (Prompt)
+                  </h3>
+                  <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowPromptLib(true)}
+                        className="text-xs flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-100 dark:border-emerald-500/20"
+                      >
+                         <BookOpen size={12} /> Inspirasi
+                      </button>
+                      <button 
+                        onClick={handleMagicPrompt}
+                        disabled={enhancing || !prompt.trim()}
+                        className="text-xs flex items-center gap-1 text-purple-600 dark:text-purple-400 hover:text-purple-700 font-bold bg-purple-50 dark:bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-100 dark:border-purple-500/20 disabled:opacity-50"
+                      >
+                         {enhancing ? <Sparkles size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                         Magic Enhance
+                      </button>
+                  </div>
                 </div>
-            ))}
-          </div>
-          
-          {/* Result Actions */}
-          <div className="mt-6 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-slate-100 pt-6">
-            <button
+                
+                <div className="relative group">
+                  <textarea
+                    value={prompt}
+                    onChange={handlePromptChange}
+                    className="w-full h-32 p-4 bg-slate-900 text-white rounded-2xl border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none transition-all shadow-inner text-sm leading-relaxed"
+                    placeholder="Deskripsikan detail yang Anda inginkan..."
+                  />
+                  <div className={`absolute bottom-3 right-3 text-xs font-medium px-2 py-1 rounded-md bg-black/50 backdrop-blur-sm ${
+                      prompt.length > MAX_PROMPT_LENGTH * 0.9 ? 'text-red-400' : 'text-slate-400'
+                  }`}>
+                    {prompt.length} / {MAX_PROMPT_LENGTH}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Settings (Ratio / Quality) */}
+              <div className="space-y-4">
+                 <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-white">{isTextToImage ? '2' : '3'}</div>
+                    Pengaturan
+                 </h3>
+                 
+                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {[AspectRatio.SQUARE, AspectRatio.LANDSCAPE, AspectRatio.PORTRAIT, AspectRatio.PORTRAIT_4_5, AspectRatio.LANDSCAPE_5_4].map((r) => (
+                       <button
+                          key={r}
+                          onClick={() => setRatio(r)}
+                          className={`px-3 py-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
+                             ratio === r 
+                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md transform scale-105' 
+                                : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-emerald-400'
+                          }`}
+                       >
+                          <div className={`border-2 rounded-sm ${
+                             r === AspectRatio.SQUARE ? 'w-5 h-5' : 
+                             r === AspectRatio.LANDSCAPE ? 'w-7 h-4' : 
+                             r === AspectRatio.PORTRAIT ? 'w-4 h-7' :
+                             r === AspectRatio.PORTRAIT_4_5 ? 'w-4 h-5' : 'w-5 h-4'
+                          } ${ratio === r ? 'border-white' : 'border-slate-400'}`}></div>
+                          {r}
+                       </button>
+                    ))}
+                 </div>
+                 
+                 {/* Video Quality Selection */}
+                 {isVideoMode && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-white/10 mt-4">
+                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 block">Kualitas Video</label>
+                       <div className="flex gap-2 bg-slate-100 dark:bg-white/5 p-1 rounded-xl w-fit">
+                          {(['720p', '1080p', '4k'] as const).map((q) => (
+                             <button
+                                key={q}
+                                onClick={() => setVideoQuality(q)}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                   videoQuality === q 
+                                     ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400' 
+                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                                }`}
+                             >
+                                {q === '4k' ? 'Ultra 4K' : q}
+                             </button>
+                          ))}
+                       </div>
+                    </div>
+                 )}
+                 
+                 {/* AI Engine Selection for Imagine/Banana */}
+                 {(isTextToImage) && (
+                     <div className="pt-2 border-t border-slate-200 dark:border-white/10 mt-4">
+                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 block">AI Engine</label>
+                       <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                             <input type="radio" checked={aiEngine === 'gemini'} onChange={() => setAiEngine('gemini')} className="text-emerald-500 focus:ring-emerald-500" />
+                             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Gemini 3 Pro</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                             <input type="radio" checked={aiEngine === 'pollinations'} onChange={() => setAiEngine('pollinations')} className="text-emerald-500 focus:ring-emerald-500" />
+                             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Flux / SDXL (Faster)</span>
+                          </label>
+                       </div>
+                    </div>
+                 )}
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 p-4 rounded-xl flex items-start gap-3 text-sm animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Generate Button */}
+              <button
                 onClick={handleGenerate}
                 disabled={loading}
-                className="px-6 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-medium text-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 w-full md:w-auto justify-center group"
-            >
-                <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${loading ? "animate-spin" : ""}`} />
-                {feature.id === 'faceswap' ? "Coba Lagi" : "Generate 4 New Variations"}
-            </button>
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                   <>
+                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     {isVideoMode ? 'Rendering Video...' : 'Generating...'}
+                   </>
+                ) : (
+                   <>
+                     <Sparkles size={20} className="animate-pulse" /> 
+                     {isVideoMode ? 'Render Video' : 'Buat 4 Variasi'}
+                   </>
+                )}
+              </button>
 
-             {/* Download All Helper for Images */}
-             {!isVideoMode && (
-                 <button 
-                  onClick={() => {
-                      generatedResults.forEach((url, i) => {
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = `andri-ai-result-${i+1}.png`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                      });
-                  }}
-                  className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium text-sm flex items-center gap-2 shadow-lg shadow-slate-200 w-full md:w-auto justify-center"
-                 >
-                     <FileDown size={16} /> Unduh Semua Hasil
-                 </button>
-             )}
+            </div>
+
+            {/* Right: Results */}
+            <div className="bg-slate-100/50 dark:bg-black/40 p-8 flex flex-col h-full min-h-[500px]">
+               <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-6">
+                  <ImagePlus size={18} className="text-emerald-500" /> Hasil Generasi
+               </h3>
+               
+               <div className="flex-1">
+                  {generatedResults.length > 0 ? (
+                     <div className={`grid gap-4 ${generatedResults.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        {generatedResults.map((res, idx) => (
+                           <div key={idx} className="group relative rounded-2xl overflow-hidden shadow-md bg-white dark:bg-black/20 animate-in zoom-in duration-500 fill-mode-backwards" style={{ animationDelay: `${idx * 100}ms` }}>
+                              {isVideoMode ? (
+                                 <video 
+                                   src={res} 
+                                   controls 
+                                   autoPlay 
+                                   loop 
+                                   className="w-full h-full object-cover"
+                                 />
+                              ) : (
+                                 <>
+                                    <img 
+                                      src={res} 
+                                      alt={`Result ${idx}`} 
+                                      className="w-full h-full object-cover cursor-pointer transition-transform duration-700 group-hover:scale-110"
+                                      onClick={() => openPreview(res)}
+                                    />
+                                    {/* Quick Actions Overlay */}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
+                                       <button onClick={() => openPreview(res)} className="p-2 bg-white/20 hover:bg-white text-white hover:text-black rounded-full backdrop-blur-sm transition-all transform hover:scale-110">
+                                          <Maximize2 size={20} />
+                                       </button>
+                                       {/* Individual Download */}
+                                       <button 
+                                          onClick={(e) => { e.stopPropagation(); handleDownload(res, 'HD'); }}
+                                          className="p-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-full shadow-lg transition-all transform hover:scale-110"
+                                          title="Download Image"
+                                       >
+                                          <Download size={20} />
+                                       </button>
+                                    </div>
+                                    
+                                    {/* Number Badge */}
+                                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 text-white text-[10px] font-bold rounded backdrop-blur-sm">
+                                       V{idx+1}
+                                    </div>
+                                 </>
+                              )}
+                           </div>
+                        ))}
+                     </div>
+                  ) : (
+                     <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl p-8 text-center">
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+                           <ImagePlus size={32} />
+                        </div>
+                        <p className="font-medium">Belum ada hasil.</p>
+                        <p className="text-sm mt-1">Isi form di sebelah kiri dan klik tombol generate.</p>
+                     </div>
+                  )}
+               </div>
+
+               {/* Action Buttons */}
+               {generatedResults.length > 0 && (
+                 <div className="mt-6 space-y-3">
+                    <button 
+                       onClick={handleGenerate}
+                       className="w-full py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                       <RefreshCw size={18} /> Generate Again
+                    </button>
+                    {!isVideoMode && images.length > 0 && (
+                       <button
+                          onClick={handleDownloadInputs}
+                          className="w-full py-3 bg-transparent text-slate-500 dark:text-slate-400 hover:text-emerald-500 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                       >
+                          <FileDown size={16} /> Download Source Images
+                       </button>
+                    )}
+                 </div>
+               )}
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
+      {/* Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-300">
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-4">
+            <button onClick={() => setPreviewImage(null)} className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all">
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div 
+             className="relative w-full h-full flex items-center justify-center overflow-hidden"
+             onWheel={handleWheel}
+             onMouseDown={handleMouseDown}
+             onMouseMove={handleMouseMove}
+             onMouseUp={handleMouseUp}
+             onMouseLeave={handleMouseUp}
+          >
+             <img 
+               src={previewImage} 
+               alt="Full Preview" 
+               className="max-w-none transition-transform duration-100 ease-out cursor-grab active:cursor-grabbing"
+               style={{ 
+                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+               }}
+               onDoubleClick={() => { setZoom(1); setPan({x:0, y:0}); }}
+               draggable={false}
+             />
+             
+             {/* Floating Zoom Controls */}
+             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/50 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
+                <button onClick={() => setZoom(Math.max(1, zoom - 0.5))} className="text-white hover:text-emerald-400 p-1"><ZoomOut size={20}/></button>
+                <span className="text-white font-mono text-sm w-12 text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(Math.min(5, zoom + 0.5))} className="text-white hover:text-emerald-400 p-1"><ZoomIn size={20}/></button>
+                <div className="w-px h-6 bg-white/20 mx-2"></div>
+                <button onClick={() => { setZoom(1); setPan({x:0,y:0}); }} className="text-white hover:text-emerald-400 p-1" title="Reset View"><RotateCcw size={18}/></button>
+             </div>
           </div>
 
-          {/* Download Inputs */}
-          {images.length > 0 && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={handleDownloadInputs}
-                className="inline-flex items-center gap-2 text-slate-400 text-xs hover:text-emerald-600 transition-colors py-2 px-4 rounded-full hover:bg-emerald-50"
-                title="Unduh semua file yang Anda unggah"
+          {/* Download Options Panel */}
+          <div className="absolute bottom-8 right-8 bg-black/80 backdrop-blur-md p-6 rounded-2xl border border-white/10 w-64 shadow-2xl">
+            <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+               <Download size={18} className="text-emerald-500" /> Download Quality
+            </h4>
+            <div className="space-y-2">
+              <button 
+                onClick={() => handleDownload(previewImage, 'HD')}
+                className="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-emerald-400 transition-all text-sm font-medium flex justify-between items-center group"
               >
-                <FileDown size={14} />
-                Unduh {images.length} Gambar Sumber (Original)
+                <span>Standard HD</span>
+                <span className="text-[10px] bg-black/50 px-1.5 py-0.5 rounded text-slate-400 group-hover:text-emerald-400">1x</span>
+              </button>
+              <button 
+                onClick={() => handleDownload(previewImage, 'FHD')}
+                className="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-emerald-400 transition-all text-sm font-medium flex justify-between items-center group"
+              >
+                <span>High Res FHD</span>
+                <span className="text-[10px] bg-black/50 px-1.5 py-0.5 rounded text-slate-400 group-hover:text-emerald-400">2x Upscale</span>
+              </button>
+              <button 
+                onClick={() => handleDownload(previewImage, 'UHD')}
+                className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600/20 to-emerald-500/20 hover:from-emerald-600/30 hover:to-emerald-500/30 border border-emerald-500/30 text-emerald-400 transition-all text-sm font-bold flex justify-between items-center group"
+              >
+                <span>Ultra 4K</span>
+                <span className="text-[10px] bg-emerald-500 text-black px-1.5 py-0.5 rounded font-bold">4x AI</span>
               </button>
             </div>
-          )}
+            {downloadingQuality && (
+               <div className="mt-4 text-center text-xs text-emerald-400 animate-pulse">
+                  Memproses {downloadingQuality}...
+               </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* History Sidebar */}
+      {showHistory && (
+         <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowHistory(false)}></div>
+            <div className="relative w-full max-w-sm bg-white dark:bg-[#0c0c0e] h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l border-slate-200 dark:border-white/10">
+               <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                     <History size={20} /> Riwayat
+                  </h3>
+                  <div className="flex gap-2">
+                     <button onClick={clearHistory} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Hapus Semua">
+                        <Trash2 size={18} />
+                     </button>
+                     <button onClick={() => setShowHistory(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg">
+                        <X size={20} />
+                     </button>
+                  </div>
+               </div>
+               
+               <div className="space-y-4">
+                  {history.filter(h => h.mode === feature.id).length > 0 ? (
+                     history.filter(h => h.mode === feature.id).map((item) => (
+                        <div key={item.id} className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl p-3 hover:border-emerald-500 cursor-pointer transition-all group" onClick={() => restoreHistory(item)}>
+                           <div className="flex gap-3">
+                              <div className="w-16 h-16 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                                 {item.type === 'video' ? (
+                                    <Video className="w-full h-full p-4 text-slate-400" />
+                                 ) : (
+                                    <img src={item.thumbnail} alt="Thumb" className="w-full h-full object-cover" />
+                                 )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                 <p className="text-xs text-slate-400 flex items-center gap-1 mb-1">
+                                    <Clock size={10} /> {new Date(item.timestamp).toLocaleString()}
+                                 </p>
+                                 <p className="text-sm text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-snug">
+                                    {item.prompt}
+                                 </p>
+                              </div>
+                           </div>
+                        </div>
+                     ))
+                  ) : (
+                     <div className="text-center text-slate-400 py-10">
+                        <p>Belum ada riwayat untuk fitur ini.</p>
+                     </div>
+                  )}
+               </div>
+            </div>
+         </div>
+      )}
+
     </div>
   );
 };
-
-const RatioOption: React.FC<{ active: boolean; onClick: () => void; label: string; icon: React.ReactNode }> = ({ active, onClick, label, icon }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg border transition-all ${
-      active 
-        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium ring-1 ring-emerald-500' 
-        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-    }`}
-  >
-    <div className={active ? 'text-emerald-600' : 'text-slate-400'}>
-      {icon}
-    </div>
-    <span>{label}</span>
-  </button>
-);
 
 export default ImageMerger;

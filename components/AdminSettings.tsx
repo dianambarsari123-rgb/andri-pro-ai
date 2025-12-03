@@ -1,23 +1,38 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server } from 'lucide-react';
+import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette } from 'lucide-react';
 
-const AdminSettings: React.FC = () => {
+interface AdminSettingsProps {
+    theme?: string;
+    setTheme?: (theme: string) => void;
+}
+
+const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme }) => {
   const [apiKey, setApiKey] = useState('');
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load existing key (simulated from env or local storage for this demo)
-    const currentKey = process.env.API_KEY || '';
-    setApiKey(currentKey);
+    // 1. Cek LocalStorage dulu (User input)
+    const localKey = localStorage.getItem('SUPERADMIN_API_KEY');
+    if (localKey) {
+        setApiKey(localKey);
+    } else {
+        // 2. Jika kosong, cek Env vars (untuk display saja)
+        // @ts-ignore
+        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+             // @ts-ignore
+             setApiKey(import.meta.env.VITE_API_KEY);
+        } else if (process.env.API_KEY) {
+             setApiKey(process.env.API_KEY);
+        }
+    }
   }, []);
 
   const handleSave = () => {
-    // In a real app, this would save to a backend or update environment context
-    // For this demo, we simulate saving to LocalStorage to persist across reloads
-    localStorage.setItem('SUPERADMIN_API_KEY', apiKey);
+    // Simpan ke LocalStorage agar Service bisa membacanya tanpa perlu build ulang
+    localStorage.setItem('SUPERADMIN_API_KEY', apiKey.trim());
     
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -27,7 +42,7 @@ const AdminSettings: React.FC = () => {
     <div className="max-w-4xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <header className="mb-8">
-         <h2 className="text-3xl font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-3">
+         <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight mb-2 flex items-center gap-3">
            <Settings size={32} className="text-emerald-600" />
            Pengaturan Superadmin
          </h2>
@@ -39,160 +54,169 @@ const AdminSettings: React.FC = () => {
         {/* Main Configuration Panel */}
         <div className="md:col-span-2 space-y-6">
           
+          {/* Appearance / Theme Settings */}
+          {setTheme && (
+              <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+                  <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+                    <Monitor size={18} className="text-purple-500" /> Tampilan Aplikasi (Theme)
+                  </h3>
+                </div>
+                <div className="p-6">
+                   <div className="grid grid-cols-3 gap-4">
+                      <button 
+                        onClick={() => setTheme('light')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'light' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
+                      >
+                         <Sun size={24} />
+                         <span className="font-bold text-sm">Light Mode</span>
+                      </button>
+                      <button 
+                        onClick={() => setTheme('dark')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'dark' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
+                      >
+                         <Moon size={24} />
+                         <span className="font-bold text-sm">Dark Mode</span>
+                      </button>
+                      <button 
+                        onClick={() => setTheme('purple')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'purple' ? 'border-purple-500 bg-purple-900/20 text-purple-300' : 'border-slate-200 dark:border-slate-700 hover:border-purple-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg"></div>
+                         <span className="font-bold text-sm">Purple Gradient</span>
+                      </button>
+                   </div>
+                </div>
+              </div>
+          )}
+
           {/* API Key Management */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
                 <Key size={18} className="text-amber-500" /> API Configuration
               </h3>
-              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Active</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${apiKey ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {apiKey ? 'Active' : 'Missing'}
+              </span>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Google Gemini API Key</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Google Gemini API Key</label>
               <div className="relative">
                 <input 
                   type={showKey ? "text" : "password"} 
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full p-3 pr-24 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-600 font-mono text-sm"
-                  placeholder="AIzaSy..."
+                  className="w-full p-3 pr-24 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-600 dark:text-slate-300 font-mono text-sm bg-white dark:bg-black/20"
+                  placeholder="Paste AIzaSy... here"
                 />
                 <button 
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2 top-2 px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+                  className="absolute right-2 top-2 px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 rounded"
                 >
                   {showKey ? "Hide" : "Show"}
                 </button>
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                Kunci API ini digunakan untuk seluruh request AI (Merge, Veo, Edit). Pastikan menggunakan kunci dari Project Google Cloud dengan billing aktif untuk fitur Video.
+                Kunci API ini akan disimpan di Browser (LocalStorage) agar aplikasi berjalan. Gunakan API Key dari Google AI Studio.
               </p>
             </div>
           </div>
 
           {/* System Control */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+              <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
                 <Shield size={18} className="text-blue-500" /> System Control
               </h3>
             </div>
             <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/5">
                 <div>
-                  <h4 className="font-medium text-slate-800">Maintenance Mode</h4>
+                  <h4 className="font-medium text-slate-800 dark:text-slate-200">Maintenance Mode</h4>
                   <p className="text-xs text-slate-500">Nonaktifkan akses user untuk sementara.</p>
                 </div>
                 <button 
                   onClick={() => setIsMaintenanceMode(!isMaintenanceMode)}
                   className={`text-2xl transition-colors ${isMaintenanceMode ? 'text-emerald-500' : 'text-slate-300'}`}
                 >
-                  {isMaintenanceMode ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                  {isMaintenanceMode ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+             <button 
+                onClick={handleSave}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95"
+             >
+                {saved ? <CheckCircle size={20} /> : <Save size={20} />}
+                {saved ? 'Tersimpan!' : 'Simpan Konfigurasi'}
+             </button>
+          </div>
+
+        </div>
+
+        {/* Sidebar Info Panel */}
+        <div className="space-y-6">
+           
+           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white shadow-xl">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                 <Activity size={20} /> Server Status
+              </h3>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center text-sm border-b border-white/20 pb-2">
+                    <span className="opacity-80">CPU Load</span>
+                    <span className="font-mono font-bold">12%</span>
+                 </div>
+                 <div className="flex justify-between items-center text-sm border-b border-white/20 pb-2">
+                    <span className="opacity-80">Memory</span>
+                    <span className="font-mono font-bold">1.2GB / 4GB</span>
+                 </div>
+                 <div className="flex justify-between items-center text-sm border-b border-white/20 pb-2">
+                    <span className="opacity-80">Uptime</span>
+                    <span className="font-mono font-bold">4d 12h 30m</span>
+                 </div>
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="opacity-80">Latency</span>
+                    <span className="font-mono font-bold text-emerald-200">24ms</span>
+                 </div>
               </div>
               
-               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <div>
-                  <h4 className="font-medium text-slate-800">Debug Logging</h4>
-                  <p className="text-xs text-slate-500">Tampilkan log error detail di console browser.</p>
-                </div>
-                <button className="text-2xl text-emerald-500">
-                   <ToggleRight size={40} />
-                </button>
+              <div className="mt-6 pt-4 border-t border-white/20">
+                 <div className="flex items-center gap-2 text-xs opacity-75">
+                    <Globe size={14} />
+                    <span>Region: asia-southeast2 (Jakarta)</span>
+                 </div>
               </div>
-            </div>
-          </div>
+           </div>
 
-          {/* Save Action */}
-          <div className="flex items-center justify-end gap-4">
-            {saved && (
-              <span className="flex items-center gap-2 text-emerald-600 text-sm font-medium animate-in fade-in">
-                <CheckCircle size={16} /> Perubahan Disimpan
-              </span>
-            )}
-            <button 
-              onClick={handleSave}
-              className="px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200 flex items-center gap-2 font-medium"
-            >
-              <Save size={18} /> Simpan Konfigurasi
-            </button>
-          </div>
+           <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 p-6">
+              <h3 className="font-bold text-slate-700 dark:text-white mb-4 flex items-center gap-2">
+                 <Server size={18} className="text-slate-400" /> System Info
+              </h3>
+              <div className="space-y-3 text-sm text-slate-500">
+                 <div className="flex justify-between">
+                    <span>App Version</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">v3.1.0 (Pro)</span>
+                 </div>
+                 <div className="flex justify-between">
+                    <span>Engine</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Gemini 3 Pro</span>
+                 </div>
+                  <div className="flex justify-between">
+                    <span>Video Model</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Veo-2.5-Preview</span>
+                 </div>
+                 <div className="flex justify-between">
+                    <span>Build Date</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Oct 25, 2024</span>
+                 </div>
+              </div>
+           </div>
 
         </div>
-
-        {/* Status Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-              <Activity size={18} className="text-emerald-500" /> Status Server
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-500">System Uptime</span>
-                  <span className="font-mono font-medium text-slate-700">99.9%</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 w-[99%]"></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-500">API Latency</span>
-                  <span className="font-mono font-medium text-emerald-600">120ms</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 w-[85%]"></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-500">Daily Requests</span>
-                  <span className="font-mono font-medium text-slate-700">1,240 / 10K</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 w-[12%]"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <div className="text-2xl font-bold text-slate-800">2.5</div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">Gemini Ver</div>
-              </div>
-              <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <div className="text-2xl font-bold text-emerald-600">Pro</div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">License</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-[#0B1E26] to-[#132E35] rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
-            <Server className="absolute -right-4 -bottom-4 text-white/5 w-32 h-32" />
-            <h3 className="font-bold text-lg mb-1 relative z-10">Andri AI Core</h3>
-            <p className="text-emerald-400 text-xs font-mono mb-4 relative z-10">v3.0.1-stable-build</p>
-            
-            <div className="space-y-2 relative z-10">
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                Gemini 2.5 Flash: <span className="text-white ml-auto">Ready</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                Google Veo 3: <span className="text-white ml-auto">Ready</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                Nano Banana: <span className="text-white ml-auto">Ready</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );

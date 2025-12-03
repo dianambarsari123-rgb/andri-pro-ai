@@ -1,3 +1,4 @@
+
 import { client } from "@gradio/client";
 
 /**
@@ -10,41 +11,48 @@ import { client } from "@gradio/client";
  */
 export const faceSwap = async (sourceFile: File, targetFile: File): Promise<string> => {
   try {
-    // Using a popular, stable public space for Face Swap (Roop/InsightFace based)
-    // Alternative spaces: "felixrosberg/face-swap", "tonyassi/face-swap"
+    console.log("Connecting to Face Swap Neural Network (High Fidelity)...");
+    
+    // Using 'tonyassi/face-swap' which is a reliable implementation of InsightFace
+    // This provides much better results than generic LLMs for identity preservation.
     const app = await client("tonyassi/face-swap"); 
 
-    // Prepare blobs
-    const sourceBlob = sourceFile;
-    const targetBlob = targetFile;
-
-    // The endpoint signature depends on the specific Gradio space.
-    // For tonyassi/face-swap, it usually accepts [source, target] and returns the image.
+    // The API signature for tonyassi/face-swap usually accepts:
+    // [source_image, target_image, use_face_enhance_bool]
+    // We set use_face_enhance_bool to TRUE for "perfect facial feature transfer"
     const result = await app.predict("/predict", [
-      sourceBlob, 
-      targetBlob, 
-      false // "Face Enhance" boolean (optional, false is faster)
+      sourceFile, 
+      targetFile, 
+      true // ENABLE FACE ENHANCER (GFPGAN) for sharper eyes and skin
     ]);
 
-    // Gradio client returns data structure. Usually result.data[0] is the file/url info
-    // Adjust based on inspection of the specific space response
+    // Gradio client returns a data array. 
+    // Usually result.data[0] contains the image information.
     const output = result.data as any[];
     
     if (output && output.length > 0) {
-        // Handle different Gradio return types (sometimes object with url, sometimes just url)
         const imageResult = output[0];
+        
+        // Handle standard Gradio URL response
         if (typeof imageResult === 'object' && imageResult.url) {
             return imageResult.url;
         }
+        // Handle direct string URL response
         if (typeof imageResult === 'string') {
             return imageResult;
         }
     }
 
-    throw new Error("No image returned from Face Swap service.");
+    throw new Error("Neural Network did not return a valid image.");
 
   } catch (error: any) {
     console.error("Hugging Face Error:", error);
-    throw new Error(`Face Swap Failed: ${error.message || "Server Busy or Error"}. Silakan coba lagi nanti atau gunakan mode lain.`);
+    
+    // specific error handling for queue/busy states
+    if (error.message && error.message.includes("Queue")) {
+        throw new Error("Server Face Swap sedang sibuk (Antrian Penuh). Silakan coba 1-2 menit lagi.");
+    }
+
+    throw new Error(`Gagal memproses Face Swap: ${error.message || "Koneksi ke Neural Network terputus"}.`);
   }
 };

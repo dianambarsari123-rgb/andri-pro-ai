@@ -2,12 +2,39 @@
 import { GoogleGenAI } from "@google/genai";
 import { AspectRatio, UploadedImage, FeatureMode } from '../types';
 
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+// --- API KEY MANAGEMENT ---
+const getApiKey = (): string => {
+  // 1. Priority: Check LocalStorage (User entered in Admin Settings)
+  const localKey = localStorage.getItem('SUPERADMIN_API_KEY');
+  if (localKey && localKey.trim().length > 10) {
+    return localKey.trim();
+  }
+
+  // 2. Check Vite Environment Variable (Standard for React/Vite)
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    // @ts-ignore
+    return import.meta.env.VITE_API_KEY;
+  }
+
+  // 3. Check Process Environment (Legacy/Node)
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+
+  throw new Error("API Key tidak ditemukan! Silakan masuk ke Menu 'Pengaturan Admin' dan masukkan Google Gemini API Key Anda.");
+};
+
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
       const base64Data = base64String.split(',')[1];
       resolve({
         inlineData: {
@@ -21,7 +48,6 @@ const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: s
   });
 };
 
-// Helper to ensure API key is selected (specifically for Veo)
 const ensureApiKey = async () => {
   const win = window as any;
   if (win.aistudio && win.aistudio.hasSelectedApiKey && win.aistudio.openSelectKey) {
@@ -32,300 +58,367 @@ const ensureApiKey = async () => {
   }
 };
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- MODEL CONFIGURATION ---
+// Primary models (Bleeding edge, might be restricted)
+const PRIMARY_IMAGE_MODEL = 'gemini-3-pro-image-preview'; 
+const PRIMARY_CHAT_MODEL = 'gemini-3-pro-preview';       
+
+// Fallback models (Stable, broadly available)
+const FALLBACK_IMAGE_MODEL = 'gemini-2.5-flash-image';   
+const FALLBACK_CHAT_MODEL = 'gemini-2.5-flash';          
+
+/**
+ * Helper to parse error details from various SDK error formats
+ */
+const parseError = (error: any) => {
+  // Convert error to string to catch codes hidden in JSON messages
+  const errString = JSON.stringify(error, Object.getOwnPropertyNames(error));
+  
+  // Extract a readable message
+  let message = error.message;
+  if (error.error && error.error.message) {
+    message = error.error.message;
+  } else if (!message && errString.length < 200) {
+    message = errString;
+  }
+  
+  // Check for permission codes in various places including the message string
+  const isPermissionError = 
+    errString.includes('403') || 
+    errString.includes('PERMISSION_DENIED') || 
+    (message && message.includes('403')) ||
+    (message && message.includes('permission')) ||
+    error?.status === 403 || 
+    error?.error?.code === 403;
+
+  const isServerError = 
+    errString.includes('500') || 
+    errString.includes('INTERNAL') || 
+    error?.status === 500;
+
+  return { isPermissionError, isServerError, message: message || "Unknown error occurred" };
+};
+
+/**
+ * Magic Prompt: Enhances a user prompt. Includes Fallback logic.
+ */
+export const enhancePrompt = async (originalPrompt: string): Promise<string> => {
+  try {
+    const apiKey = getApiKey();
+    const ai = new GoogleGenAI({ apiKey });
+    
+    // Attempt with Pro model
+    try {
+        const response = await ai.models.generateContent({
+          model: PRIMARY_CHAT_MODEL,
+          contents: {
+            parts: [{ text: `You are an expert AI Prompt Engineer and visual artist. 
+            Your task is to take the following simple user input and rewrite it into a highly detailed, descriptive, and artistic prompt suitable for top-tier image generation models (like Gemini 3 Pro, Midjourney, or Flux).
+            
+            Key requirements:
+            - Expand on lighting (e.g., volumetric, cinematic, studio softbox).
+            - Describe textures, materials, and colors vividly.
+            - Specify camera angles and lens types (e.g., 85mm f/1.8, wide angle).
+            - Add mood and atmosphere keywords (e.g., ethereal, cyberpunk, serene).
+            - Keep the original subject matter but elevate the description to be professional.
+            - Output ONLY the raw enhanced prompt string. Do not add "Here is the prompt" or quotes.
+            
+            User Input: "${originalPrompt}"` }]
+          },
+          config: {
+            systemInstruction: "You are a creative writing assistant specialized in visual descriptions."
+          }
+        });
+        return response.text?.trim() || originalPrompt;
+    } catch(err: any) {
+        const { isPermissionError } = parseError(err);
+        
+        if (isPermissionError) {
+            console.warn("Enhance prompt fallback to Flash due to 403 Permission Error");
+            const response = await ai.models.generateContent({
+              model: FALLBACK_CHAT_MODEL,
+              contents: {
+                parts: [{ text: `Expand this image description to be more detailed and artistic: "${originalPrompt}"` }]
+              }
+            });
+            return response.text?.trim() || originalPrompt;
+        }
+        throw err;
+    }
+    
+  } catch (e) {
+    console.warn("Failed to enhance prompt completely", e);
+    return originalPrompt;
+  }
+};
+
+/**
+ * Main Image Generation Function with Fallback & Retry
+ */
 export const generateImage = async (
   prompt: string,
   images: UploadedImage[],
   ratio: AspectRatio,
-  mode: FeatureMode
+  mode: FeatureMode,
+  retries = 3,
+  useFallback = false
 ): Promise<string> => {
   try {
-    // Create client instance right before call to get latest key
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = getApiKey();
+    const ai = new GoogleGenAI({ apiKey });
     
+    // Prepare images
     const imageParts = await Promise.all(images.map((img) => fileToGenerativePart(img.file)));
     
     let systemContext = "";
-    
     switch (mode) {
-      case 'merge':
-        systemContext = "Task: Merge the provided images into a single cohesive composite image.";
-        break;
-      case 'thumbnail':
-        systemContext = "Task: Create a high-converting, click-worthy YouTube thumbnail.";
-        break;
-      case 'expand':
-        systemContext = "Task: Outpaint and expand the scene of the provided image seamlessly. Maintain style consistency.";
-        break;
-      case 'edit':
-        systemContext = "Task: Edit the image precisely according to the user instructions. Maintain original style where possible.";
-        break;
-      case 'faceswap':
-        systemContext = `
-          CRITICAL ASSIGNMENT: PHOTOREALISTIC FACE SWAPPING.
-          
-          ROLE: You are a Forensic Image Specialist and VFX Compositor.
-          
-          INPUT IDENTIFICATION:
-          - Image 1 is the SOURCE FACE (The Identity).
-          - Image 2 is the TARGET BODY/SCENE (The Context).
-          
-          STRICT EXECUTION RULES:
-          1. IDENTITY PRESERVATION: You MUST transfer the eyes, nose, mouth, eyebrows, and facial structure of Image 1 onto the head of Image 2. The person must look exactly like Image 1.
-          2. CONTEXT PRESERVATION: You MUST KEEP the hair, head shape, ears, neck, body, clothing, background, and lighting of Image 2 EXACTLY as they are. DO NOT CHANGE THE HAIRSTYLE of Image 2.
-          3. SKIN TONE BLENDING: The skin color of the new face must perfectly match the lighting condition and skin tone of the body in Image 2.
-          4. REALISM: The result must be a real photo. No cartoon filters, no painting effects, no smoothing artifacts. High skin texture detail (pores, wrinkles) is required.
-          
-          OUTPUT: A single seamless photo where Person 1's face is on Person 2's body.
-        `;
-        break;
-      case 'videofaceswap':
-        systemContext = `
-          TASK: ANIMATE A STATIC PORTRAIT INTO A REALISTIC VIDEO.
-          
-          INPUT: A static photo of a face.
-          GOAL: Generate a video of THIS SPECIFIC PERSON performing the action described in the prompt.
-          
-          CRITICAL:
-          - The person in the video MUST be the person in the uploaded photo.
-          - Maintain facial identity (eyes, nose, mouth) consistency throughout the video.
-          - Style: Photorealistic, cinematic lighting.
-        `;
-        break;
-      case 'fitting': // Kamar Pas
-        systemContext = "Task: Virtual Try-On / Fitting. The FIRST image is the PERSON. The SECOND image is the CLOTHING/GARMENT. Generate a photo of the person wearing the clothing. Ensure realistic fabric physics, draping, and lighting matching the person's photo.";
-        break;
-      case 'product':
-        systemContext = "Task: Create a professional commercial product photograph. The first image is the product. Place it in a high-quality studio setting appropriate for the brand.";
-        break;
-      case 'fashion':
-        systemContext = "Task: Generate a high-fashion editorial shot using the provided clothing/reference. Use professional model posing and editorial lighting.";
-        break;
-      case 'mockup':
-        systemContext = "Task: Apply the design/logo from the first image onto a realistic mockup scene defined by the user (e.g., mug, shirt, billboard).";
-        break;
-      
-      // Studio Foto AI
-      case 'prewedding':
-        systemContext = "Task: Create a romantic pre-wedding photo. Enhance lighting, mood, and background to be cinematic and dreamy. Focus on the couple's connection.";
-        break;
-      case 'wedding':
-        systemContext = "Task: Create a stunning wedding photography shot. Focus on elegance, white dresses, suits, celebration atmosphere, and magical lighting.";
-        break;
-      case 'babyborn':
-        systemContext = "Task: Create a professional newborn baby photography shot. Use soft textures, gentle pastel lighting, and cute props (baskets, blankets). High safety and comfort aesthetic.";
-        break;
-      case 'kids':
-        systemContext = "Task: Create a professional kids portrait. Bright, playful, and high-quality studio lighting. Capture natural expressions.";
-        break;
-      case 'maternity':
-        systemContext = "Task: Create an elegant maternity photo. Focus on the silhouette, soft lighting, and emotional connection. Graceful posing.";
-        break;
-      case 'umrah':
-        systemContext = "Task: Create a photo with Umrah/Haji theme. Background should be Mecca or Medina (Kaaba or Nabawi mosque). Subjects should be wearing accurate Ihram or modest islamic clothing. Atmosphere: Peaceful, spiritual, holy.";
-        break;
-      case 'passphoto':
-        systemContext = "Task: Create a formal ID/Passport photo. Strict requirements: Frontal face, neutral expression, even lighting, no shadows on face. Background must be solid color as requested (usually Red #db1514 or Blue #0090ff).";
-        break;
-
-      // Desain & Seni
-      case 'interior':
-        systemContext = "Task: Generate a photorealistic interior design based on the room layout or concept provided. Focus on lighting, textures, material realism, and furniture arrangement.";
-        break;
-      case 'exterior':
-        systemContext = "Task: Generate a photorealistic architectural exterior design. Focus on building facade, landscaping, environmental lighting, and realistic materials.";
-        break;
-      case 'sketch':
-        systemContext = "Task: Convert the image or concept into a high-quality artistic sketch. Pencil, charcoal, or technical line art style as requested.";
-        break;
-      case 'caricature':
-        systemContext = "Task: Create a fun and artistic caricature or cartoon version of the subject. Exaggerate features slightly for style while maintaining likeness. High quality rendering.";
-        break;
-
-      // Marketing (Text based or Ref image based)
-      case 'banner':
-        systemContext = "Task: Create a professional advertising banner layout. Focus on visual hierarchy, space for text (if any), and engaging visuals suitable for web or print promotion.";
-        break;
-      case 'carousel':
-        systemContext = "Task: Create a visually engaging social media carousel slide. Focus on clear graphics, modern flat or 3D illustration style, and eye-catching composition.";
-        break;
-      
-      // Special
-      case 'banana':
-        systemContext = "Task: Nano Banana Mode. Be creative, vibrant, and fast. Generate high-quality artistic interpretations of the prompt.";
-        break;
-
-      default:
-        systemContext = "Task: Generate a creative image based on the inputs.";
+      case 'imagine': systemContext = "Task: Text-to-Image Generation. Create a high-quality, highly detailed image based strictly on the user's description."; break;
+      case 'merge': systemContext = "Task: Merge images into a cohesive composite. Blend lighting and shadows perfectly."; break;
+      case 'thumbnail': systemContext = "Task: Create a high-converting YouTube thumbnail. Use vibrant colors and dramatic expressions."; break;
+      case 'expand': systemContext = "Task: Outpaint and expand the scene seamlessly. Match the style and texture of the original image."; break;
+      case 'edit': systemContext = "Task: Edit the image precisely according to instructions. Maintain original style."; break;
+      case 'removeobj': systemContext = "Task: Magic Eraser. Remove the object described and inpaint the background seamlessly."; break;
+      case 'removebg': systemContext = "Task: Background Removal. Isolate the subject perfectly and place it on a pure white background (#FFFFFF). Ensure edges are clean."; break;
+      case 'restore': systemContext = "Task: Photo Restoration. Sharpen details, reduce noise, and colorize if black and white. Make it high definition."; break;
+      case 'faceswap': systemContext = "Task: Face Swap. Reconstruct the face from the first image onto the body of the second image. Maintain identity, skin tone, and lighting of the target scene."; break;
+      case 'fitting': systemContext = "Task: Virtual Try-On. Warp the clothing from the second image onto the person in the first image. Adjust folds and lighting."; break;
+      case 'product': systemContext = "Task: Commercial Product Photography. Enhance lighting, reflections, and composition to look like a high-end studio shot."; break;
+      case 'fashion': systemContext = "Task: Fashion Editorial. Showcase the clothing and model with professional posing and lighting."; break;
+      case 'prewedding': systemContext = "Task: Romantic Pre-wedding Photography. Soft lighting, dreamy atmosphere, emotional connection."; break;
+      case 'wedding': systemContext = "Task: Luxury Wedding Photography. Grandeur, elegance, sharp details, and perfect lighting."; break;
+      case 'babyborn': systemContext = "Task: Newborn Photography. Soft textures, pastel tones, gentle lighting, adorable composition."; break;
+      case 'kids': systemContext = "Task: Child Photography. Vibrant, energetic, sharp focus, capturing genuine expressions."; break;
+      case 'maternity': systemContext = "Task: Maternity Photography. Elegant silhouettes, soft lighting, emotional and artistic."; break;
+      case 'umrah': systemContext = "Task: Religious Photography. Place the subject in a holy setting (Mecca/Kaaba) with respect and realism."; break;
+      case 'interior': systemContext = "Task: Interior Design Rendering. Photorealistic furniture placement, lighting, and textures."; break;
+      case 'exterior': systemContext = "Task: Architectural Rendering. Realistic building materials, landscaping, and environmental lighting."; break;
+      case 'sketch': systemContext = "Task: Artistic Sketch. Convert the image into a detailed pencil or charcoal sketch."; break;
+      case 'caricature': systemContext = "Task: 3D Caricature. Exaggerated features, Pixar-style rendering, cute and expressive."; break;
+      case 'flayer': systemContext = "Task: Flyer Design. Create a promotional layout with the image elements. Modern and professional."; break;
+      case 'banana': systemContext = "Task: Artistic Creation. Create a vibrant and creative image."; break;
+      default: systemContext = "Task: Advanced Photo Manipulation. Follow the user's prompt exactly. High quality, photorealistic output."; break;
     }
 
-    // Construct a detailed prompt for the model
-    const fullPrompt = `
-      ${systemContext}
-      User Instruction: ${prompt}
-      Style: Professional, high quality, photorealistic (unless specified otherwise).
-      Output Aspect Ratio: ${ratio}
-      Important: Generate a unique variation.
-    `;
+    const modelName = useFallback ? FALLBACK_IMAGE_MODEL : PRIMARY_IMAGE_MODEL;
+    console.log(`Generating with ${modelName} for mode ${mode} (Fallback: ${useFallback})`);
+
+    // Construct content parts
+    const contents = {
+        parts: [
+            ...imageParts,
+            { text: `${systemContext}\n\nUser Instruction: ${prompt}\n\nAspect Ratio: ${ratio}` }
+        ]
+    };
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [
-          ...imageParts,
-          { text: fullPrompt }
-        ]
-      },
+      model: modelName,
+      contents: contents,
       config: {
-        // Nano banana models do not support responseMimeType
-      }
+        generationConfig: {
+            temperature: 0.4, 
+        }
+      } as any
     });
 
-    // Iterate through parts to find the image
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (!parts) {
-      throw new Error("No content generated.");
+    // Parse Response
+    const candidates = response.candidates;
+    if (candidates && candidates[0] && candidates[0].content && candidates[0].content.parts) {
+        for (const part of candidates[0].content.parts) {
+            if (part.inlineData && part.inlineData.data) {
+                return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+            }
+        }
+        if (candidates[0].content.parts[0].text) {
+             throw new Error("AI returned text instead of image: " + candidates[0].content.parts[0].text);
+        }
     }
 
-    for (const part of parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-
-    throw new Error("The model did not return an image. Please try again with a different prompt.");
+    throw new Error("No image data found in response.");
 
   } catch (error: any) {
     console.error("Gemini Generation Error:", error);
-    throw new Error(error.message || "Failed to generate image.");
+
+    const { isPermissionError, isServerError, message } = parseError(error);
+
+    // Automatic Fallback for Permission Error (403) -> Switch to Flash
+    if (isPermissionError && !useFallback) {
+        console.warn("Permission denied for Pro model. Switching to Flash...");
+        return generateImage(prompt, images, ratio, mode, retries, true);
+    }
+
+    // Retry Logic for Server Errors (500)
+    if (retries > 0 && (isServerError || message.includes('FetchFailure') || message.includes('Overloaded'))) {
+        console.warn(`Retrying... (${retries} attempts left)`);
+        await delay(2000 * (4 - retries)); // Exponential backoff
+        return generateImage(prompt, images, ratio, mode, retries - 1, useFallback);
+    }
+
+    throw error; // Let the UI handle the error display
   }
 };
 
-// New Function to generate 4 variations in parallel
+/**
+ * Sequential Batch Generation
+ * Generates N images one by one to avoid 500 XHR Errors.
+ */
 export const generateBatchImages = async (
+    prompt: string, 
+    images: UploadedImage[], 
+    ratio: AspectRatio, 
+    mode: FeatureMode,
+    count: number = 4,
+    onProgress?: (current: number, total: number) => void
+): Promise<string[]> => {
+    const results: string[] = [];
+    
+    // Check key before starting loop
+    getApiKey(); 
+
+    for (let i = 0; i < count; i++) {
+        if (onProgress) onProgress(i + 1, count);
+        
+        const variationPrompt = `${prompt} (Variation ${i+1})`;
+        
+        try {
+            const result = await generateImage(variationPrompt, images, ratio, mode);
+            results.push(result);
+        } catch (e) {
+            console.error(`Batch item ${i+1} failed`, e);
+            // If the first one fails hard (e.g. invalid key), stop immediately
+            if (results.length === 0 && i === 0) {
+                 throw e; 
+            }
+        }
+        
+        // Small delay to let the network breathe
+        await delay(1000); 
+    }
+    
+    if (results.length === 0) {
+        throw new Error("Gagal membuat gambar. Pastikan API Key Anda valid dan kuota mencukupi.");
+    }
+
+    return results;
+};
+
+/**
+ * Video Generation using Google Veo
+ */
+export const generateVideo = async (
     prompt: string,
     images: UploadedImage[],
     ratio: AspectRatio,
     mode: FeatureMode,
-    count: number = 4
-  ): Promise<string[]> => {
-    
-    // Create an array of promises
-    const promises = Array.from({ length: count }).map(() => 
-        generateImage(prompt, images, ratio, mode)
-            .catch(e => {
-                console.error("One batch item failed", e);
-                return null; // Return null on failure so Promise.all doesn't fail everything
-            })
-    );
-  
-    const results = await Promise.all(promises);
-    
-    // Filter out nulls (failed generations)
-    const validResults = results.filter((res): res is string => res !== null);
-    
-    if (validResults.length === 0) {
-        throw new Error("Gagal membuat gambar. Silakan coba lagi.");
-    }
-  
-    return validResults;
-  };
-
-export const generateVideo = async (
-  prompt: string,
-  images: UploadedImage[],
-  ratio: AspectRatio,
-  quality: '720p' | '1080p' | '4k' = '1080p'
+    quality: '720p' | '1080p' | '4k' = '1080p'
 ): Promise<string> => {
-  try {
-    // 1. Ensure API Key is selected for Veo
-    await ensureApiKey();
+    try {
+        await ensureApiKey(); // Check for API key selection (required for Veo)
+        
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+        
+        // Map ratio to Veo supported formats
+        let veoRatio = '16:9';
+        if (ratio === AspectRatio.PORTRAIT || ratio === AspectRatio.PORTRAIT_4_5) veoRatio = '9:16';
+        
+        // Determine Model
+        let model = 'veo-3.1-fast-generate-preview'; // Default
+        if (quality === '4k') model = 'veo-3.1-generate-preview'; // Higher quality model
 
-    // 2. Create client with current key
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // Prepare Inputs
+        let imagePart = null;
+        if (images.length > 0) {
+            const { inlineData } = await fileToGenerativePart(images[0].file);
+            imagePart = {
+                imageBytes: inlineData.data,
+                mimeType: inlineData.mimeType
+            };
+        }
 
-    // 3. Prepare config
-    // Map existing ratio enum to Veo supported strings
-    let veoAspectRatio = '16:9';
-    if (ratio === AspectRatio.PORTRAIT) veoAspectRatio = '9:16';
-    // Square is not directly supported by Veo usually, default to 16:9 or handle error. 
-    // Guidelines say "Can be 16:9 (landscape) or 9:16 (portrait)".
-    if (ratio === AspectRatio.SQUARE) veoAspectRatio = '16:9'; 
+        let finalPrompt = prompt;
+        if (mode === 'videofaceswap') {
+            finalPrompt = `Cinematic shot. Animate the person in the image: ${prompt}. Maintain facial identity strictly. High motion quality.`;
+        } else if (mode === 'animate') {
+            finalPrompt = `Bring this image to life. ${prompt}. Smooth camera movement, natural elements motion (wind, water, light).`;
+        }
 
-    // Determine Model and Resolution based on requested quality
-    let modelName = 'veo-3.1-fast-generate-preview';
-    let resolution = '1080p';
-
-    if (quality === '720p') {
-      modelName = 'veo-3.1-fast-generate-preview';
-      resolution = '720p';
-    } else if (quality === '1080p') {
-      modelName = 'veo-3.1-fast-generate-preview';
-      resolution = '1080p';
-    } else if (quality === '4k') {
-      // Use the higher quality model for "Ultra/4K" request
-      // Note: API currently supports 720p/1080p output for preview models, 
-      // but generate-preview is higher fidelity than fast-generate-preview.
-      modelName = 'veo-3.1-generate-preview';
-      resolution = '1080p'; 
-    }
-
-    const config: any = {
-      numberOfVideos: 1,
-      resolution: resolution,
-      aspectRatio: veoAspectRatio
-    };
-
-    let operation;
-
-    // 4. Call generateVideos
-    // Case 1: Prompt only (or Prompt + Image)
-    if (images.length > 0) {
-        // Veo supports image prompt. Use the first image.
-        const filePart = await fileToGenerativePart(images[0].file);
-        operation = await ai.models.generateVideos({
-            model: modelName,
-            prompt: prompt,
-            image: {
-                imageBytes: filePart.inlineData.data,
-                mimeType: filePart.inlineData.mimeType,
-            },
-            config: config
+        console.log(`Starting Veo Generation: ${model}, ${veoRatio}, ${quality}`);
+        
+        let operation = await ai.models.generateVideos({
+            model: model,
+            prompt: finalPrompt,
+            image: imagePart || undefined,
+            config: {
+                numberOfVideos: 1,
+                aspectRatio: veoRatio as any,
+                resolution: quality === '720p' ? '720p' : '1080p' 
+            }
         });
-    } else {
-        operation = await ai.models.generateVideos({
-            model: modelName,
-            prompt: prompt,
-            config: config
+
+        // Poll for completion
+        while (!operation.done) {
+            await delay(5000); // Wait 5s
+            operation = await ai.operations.getVideosOperation({ operation: operation });
+            console.log("Veo processing...");
+        }
+
+        if (operation.response && operation.response.generatedVideos && operation.response.generatedVideos.length > 0) {
+            const videoUri = operation.response.generatedVideos[0].video?.uri;
+            if (videoUri) {
+                return `${videoUri}&key=${apiKey}`;
+            }
+        }
+
+        throw new Error("Video generation completed but no URI returned.");
+
+    } catch (error: any) {
+        console.error("Veo Error:", error);
+        throw new Error(`Gagal membuat video: ${error.message}`);
+    }
+};
+
+/**
+ * Chat with Gemini
+ */
+export const chatWithGemini = async (history: ChatMessage[], newMessage: string): Promise<string> => {
+    try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+        
+        const chatHistory = history.map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.text }]
+        }));
+
+        const chat = ai.chats.create({
+            model: PRIMARY_CHAT_MODEL,
+            history: chatHistory,
+            config: {
+                systemInstruction: "You are Andri AI, a helpful, professional, and creative AI assistant for a graphic design platform. Help users with prompts, ideas, and technical questions about photo editing."
+            }
         });
-    }
 
-    // 5. Poll for completion
-    while (!operation.done) {
-      // Longer poll interval for high quality
-      const pollTime = quality === '4k' ? 10000 : 5000;
-      await new Promise(resolve => setTimeout(resolve, pollTime));
-      operation = await ai.operations.getVideosOperation({operation: operation});
-    }
+        try {
+            const result = await chat.sendMessage({ message: newMessage });
+            return result.text || "Maaf, saya tidak bisa menjawab saat ini.";
+        } catch (err: any) {
+             const { isPermissionError } = parseError(err);
+             if (isPermissionError) {
+                 console.warn("Chat fallback to Flash due to 403");
+                 const fallbackChat = ai.chats.create({
+                    model: FALLBACK_CHAT_MODEL,
+                    history: chatHistory
+                 });
+                 const res = await fallbackChat.sendMessage({ message: newMessage });
+                 return res.text || "Maaf, saya tidak bisa menjawab saat ini.";
+             }
+             throw err;
+        }
 
-    // 6. Get Result
-    const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!videoUri) {
-        throw new Error("Video generation failed or no URI returned.");
+    } catch (error: any) {
+        console.error("Chat Error:", error);
+        throw error;
     }
-
-    // Append key for download
-    return `${videoUri}&key=${process.env.API_KEY}`;
-
-  } catch (error: any) {
-    console.error("Veo Generation Error:", error);
-    if (error.message && error.message.includes("Requested entity was not found")) {
-        // Reset key if needed, or prompt user to re-select
-         const win = window as any;
-         if (win.aistudio && win.aistudio.openSelectKey) {
-            await win.aistudio.openSelectKey();
-             throw new Error("API Key issue detected. Please select your key again and retry.");
-         }
-    }
-    throw new Error(error.message || "Failed to generate video.");
-  }
 };

@@ -8,23 +8,31 @@ export interface UploadedImage {
 export enum AspectRatio {
   SQUARE = '1:1',
   LANDSCAPE = '16:9',
-  PORTRAIT = '9:16'
+  PORTRAIT = '9:16',
+  PORTRAIT_4_5 = '4:5', // Instagram Portrait
+  LANDSCAPE_5_4 = '5:4' // Standard Landscape
 }
 
 export type FeatureMode = 
   | 'home'
+  | 'profile'       
   | 'merge' 
   | 'thumbnail' 
   | 'expand' 
   | 'edit' 
+  | 'removeobj'     
+  | 'removebg'
+  | 'restore'       
   | 'faceswap' 
-  | 'videofaceswap' // Baru: Video Face Swap
-  | 'fitting'       // Kamar Pas
+  | 'videofaceswap'
+  | 'animate'       
+  | 'fitting'       
   | 'product' 
   | 'fashion' 
   | 'mockup' 
   | 'banner' 
   | 'carousel'
+  | 'flayer'        
   | 'prewedding'
   | 'wedding'
   | 'babyborn'
@@ -36,11 +44,18 @@ export type FeatureMode =
   | 'exterior'
   | 'sketch'
   | 'caricature'
-  | 'banana'        // Baru: Nano Banana
-  | 'veo'           // Baru: Google Veo 3
-  | 'settings';     // Baru: Admin Settings
+  | 'imagine'       // New Text-to-Image
+  | 'banana'        
+  | 'veo'
+  | 'chatbot'       
+  | 'youtube'       
+  | 'tiktok'
+  | 'instagram'
+  | 'facebook'
+  | 'twitter'
+  | 'settings';     
 
-export type FeatureType = 'image' | 'video';
+export type FeatureType = 'image' | 'video' | 'tool' | 'downloader' | 'chat';
 
 export interface FeatureConfig {
   id: FeatureMode;

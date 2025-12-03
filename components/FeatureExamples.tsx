@@ -10,268 +10,291 @@ interface ExampleData {
   description: string;
 }
 
-// Helper to get reliable Unsplash images
+// Helper to get reliable Unsplash images with specific dimensions
 const getImg = (id: string, w: number = 300) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 export const FEATURE_EXAMPLES: Partial<Record<FeatureMode, ExampleData>> = {
+  // --- MENU UTAMA ---
+  home: { inputs: [], output: "", label: "", description: "" },
+  settings: { inputs: [], output: "", label: "", description: "" },
+  profile: { inputs: [], output: "", label: "", description: "" },
+  chatbot: { inputs: [], output: "", label: "", description: "" }, // No example needed for chat
+  
+  banana: {
+    inputs: [getImg('1618005182384-a83a8bd57fbe', 150)], // Abstract
+    output: getImg('1550684848-fac1c5b4e853', 400), // Vaporwave Art
+    label: "Banana Art",
+    description: "Generasi seni abstrak super cepat & kreatif."
+  },
+  veo: {
+    inputs: [getImg('1470071459604-3b5ec3a7fe05', 150)], // Nature
+    output: getImg('1492691527719-9d1e07e534b4', 400), // Cinematic Landscape
+    label: "Cinematic Video",
+    description: "Visual video kualitas tinggi dari teks."
+  },
+
+  // --- EDITING ---
   merge: {
     inputs: [
       getImg('1534528741775-53994a69daeb', 150), // Woman Portrait
-      getImg('1470071459604-3b5ec3a7fe05', 150)  // Nature Background
+      getImg('1479030160180-b1860951d6ec', 150)  // Nature Background
     ],
-    output: getImg('1520633887019-2457c177b908', 400), // Woman in Nature Composite
+    output: getImg('1515886657613-9f3515b0c78f', 400), // Artistic Composite
     label: "Komposisi Visual",
-    description: "Gabungkan subjek dengan latar belakang baru secara seamless dan realistis."
+    description: "Gabungkan subjek dengan latar belakang baru secara seamless."
+  },
+  thumbnail: {
+    inputs: [getImg('1535713875002-d1d0cf377fde', 150)],
+    output: getImg('1611162617474-5b21e879e113', 400), // Colorful YouTube style
+    label: "Thumbnail YouTube",
+    description: "Buat thumbnail clickbait dengan teks dan ekspresi dramatis."
+  },
+  expand: {
+    inputs: [getImg('1469334031218-e382a71b716b', 150)], // Portrait girl
+    output: getImg('1470770841072-f978cf4d019e', 400), // Wide landscape
+    label: "Perluas Foto",
+    description: "Ubah rasio foto dengan menambahkan latar belakang otomatis."
+  },
+  edit: {
+    inputs: [getImg('1517841905240-472988babdf9', 150)], // Girl in city
+    output: getImg('1529139574466-a30222ade8ce', 400), // Girl in forest (edited)
+    label: "Magic Edit",
+    description: "Ubah objek, baju, atau lokasi dengan instruksi teks."
+  },
+  removeobj: {
+    inputs: [getImg('1512353087831-506740398914', 150)], // Desk with object
+    output: getImg('1493723843689-ce14595a1808', 400), // Clean desk
+    label: "Hapus Objek",
+    description: "Hilangkan objek yang mengganggu dari foto dengan bersih."
+  },
+  removebg: {
+    inputs: [getImg('1534528741775-53994a69daeb', 150)], // Woman Portrait
+    output: getImg('1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80&bg=fff', 400), // Woman on white (simulated)
+    label: "Hapus Background",
+    description: "Isolasi subjek dan ganti background menjadi putih polos."
+  },
+  restore: {
+    inputs: [getImg('1515510697926-21804c814424', 150)], // BW Old style
+    output: getImg('1500648767791-00dcc994a43e', 400), // Colorized HD
+    label: "Restorasi Foto",
+    description: "Pertajam foto buram dan warnai foto hitam putih."
   },
   faceswap: {
     inputs: [
       getImg('1500648767791-00dcc994a43e', 150), // Source Face (Man)
-      getImg('1560250097-0b93528c311a', 150)  // Target Body (Man in Suit)
+      getImg('1507679721516-fed88b35c610', 150)  // Target Body (Suit)
     ],
-    output: getImg('1507003211169-0a1dd7228f2d', 400), // Result Professional
+    output: getImg('1560250097-0b93528c311a', 400), // Result Man in Suit
     label: "Tukar Wajah",
     description: "Ganti wajah target dengan wajah sumber secara realistis."
   },
+  animate: {
+    inputs: [getImg('1470071459604-3b5ec3a7fe05', 150)], // Nature
+    output: getImg('1472214103451-9374bd1c7dd1', 400), // Nature Motion
+    label: "Animate Veo",
+    description: "Ubah foto diam menjadi video cinematic (Zoom/Pan)."
+  },
   videofaceswap: {
     inputs: [
-      getImg('1535713875002-d1d0cf377fde', 150), // Woman Face
+      getImg('1494790108377-be9c29b29330', 150), // Woman Smiling
     ],
-    output: getImg('1492633426602-9dd7f241c728', 400), // Cinematic video thumbnail (simulated)
-    label: "Video Animasi Wajah",
-    description: "Hidupkan foto diam menjadi video bergerak sesuai instruksi (Veo)."
+    output: getImg('1492633426602-9dd7f241c728', 400), // Cinematic Video Look
+    label: "Video Animasi",
+    description: "Hidupkan foto diam menjadi video bergerak."
   },
   fitting: {
     inputs: [
       getImg('1534528741775-53994a69daeb', 150), // Model
-      getImg('1434389677669-e08b4cac3105', 150)  // Clothes/Dress
+      getImg('1515347619252-60a6bf4fffce', 150)  // Dress
     ],
-    output: getImg('1496747611176-843222e1e57c', 400), // Result Model Wearing Dress
+    output: getImg('1515886657613-9f3515b0c78f', 400), // Result Fashion
     label: "Virtual Try-On",
-    description: "Cobalah pakaian baru pada foto Anda secara instan."
+    description: "Coba pakaian secara virtual pada foto model."
   },
-  product: {
-    inputs: [
-      getImg('1542291026-7eec264c27ff', 150) // Red Shoe
-    ],
-    output: getImg('1560769625-ed597487d60e', 400), // Creative Shoe Shot
-    label: "Foto Produk Studio",
-    description: "Ubah foto produk sederhana menjadi materi iklan profesional."
-  },
-  interior: {
-    inputs: [
-      getImg('1513694203232-719a280e022f', 150) // Empty/White Room
-    ],
-    output: getImg('1618221195710-dd6b41faaea6', 400), // Furnished Living Room
-    label: "Desain Interior",
-    description: "Visualisasikan ruangan kosong menjadi desain interior menawan."
-  },
+
+  // --- STUDIO FOTO AI ---
   prewedding: {
-    inputs: [
-      getImg('1529626455594-4ff0802cfb7e', 150) // Couple Casual
-    ],
-    output: getImg('1515934751635-c81c6bc9a2d8', 400), // Cinematic couple sunset
-    label: "Cinematic Prewedding",
-    description: "Ubah foto biasa menjadi momen prewedding yang romantis."
+    inputs: [getImg('1529626455594-4ff0802cfb7e', 150)], // Casual Couple
+    output: getImg('1515934751635-c81c6bc9a2d8', 400), // Wedding Couple
+    label: "Prewedding",
+    description: "Ubah foto couple biasa menjadi momen romantis estetik."
   },
   wedding: {
-    inputs: [
-      getImg('1519741497674-611481863552', 150) // Wedding Indoor
-    ],
-    output: getImg('1511285560982-1351cdeb9821', 400), // Grand Wedding Venue
-    label: "Wedding Glamour",
-    description: "Tingkatkan kemewahan foto pernikahan Anda."
+    inputs: [getImg('1519741497674-611481863552', 150)], // Wedding
+    output: getImg('1511285560987-54db96628f63', 400), // Grand Wedding
+    label: "Wedding Luxury",
+    description: "Simulasi pernikahan mewah dengan dekorasi impian."
   },
   babyborn: {
-    inputs: [
-      getImg('1519689680058-324335c77eba', 150) // Baby Close up
-    ],
-    output: getImg('1510153806139-0d7af8f4528c', 400), // Newborn Setup
-    label: "Newborn Photography",
-    description: "Tema foto bayi yang lucu dan estetik."
+    inputs: [getImg('1519689609971-54e634566b43', 150)], // Baby
+    output: getImg('1555252309-43b384c7a02c', 400), // Newborn Art
+    label: "Newborn Art",
+    description: "Foto bayi dengan properti lucu dan pencahayaan lembut."
   },
   kids: {
-    inputs: [
-      getImg('1488521787991-ed7bbaae773c', 150) // Kid Outside
-    ],
-    output: getImg('1503454537195-1dcabb73ffb9', 400), // Kid Portrait Studio
-    label: "Foto Anak Ceria",
-    description: "Abadikan momen ceria anak dengan lighting studio sempurna."
+    inputs: [getImg('1471286174899-8c1175250478', 150)], // Kid
+    output: getImg('1503454537195-1dcabb73ffb9', 400), // Playful Kid
+    label: "Kids Portrait",
+    description: "Foto anak ceria dengan tema fantasi atau studio."
   },
   maternity: {
-    inputs: [
-      getImg('1551853613-2c176722d4d8', 150) // Pregnant Woman
-    ],
-    output: getImg('1584265538944-79350c377d01', 400), // Artistic Maternity
-    label: "Maternity Elegan",
-    description: "Foto kehamilan yang artistik dan penuh emosi."
-  },
-  passphoto: {
-    inputs: [
-      getImg('1506794778202-cad84cf45f1d', 150) // Portrait Man Casual
-    ],
-    output: getImg('1507003211169-0a1dd7228f2d', 400), // Formal Headshot
-    label: "Pas Foto Formal",
-    description: "Ganti background menjadi Merah/Biru untuk keperluan formal."
-  },
-  exterior: {
-    inputs: [
-      getImg('1564013799919-ab600027ffc6', 150) // House Construction
-    ],
-    output: getImg('1600596542815-a69096927579', 400), // Modern Luxury House
-    label: "Desain Eksterior",
-    description: "Ubah sketsa atau foto rumah lama menjadi desain modern."
-  },
-  sketch: {
-    inputs: [
-      getImg('1531123897727-8f129e1688ce', 150) // Portrait Woman
-    ],
-    output: getImg('1579783902614-a3fb3927b6a5', 400), // Pencil Sketch Art
-    label: "Sketsa Artistik",
-    description: "Ubah foto menjadi lukisan pensil atau sketsa."
-  },
-  caricature: {
-    inputs: [
-      getImg('1500648767791-00dcc994a43e', 150) // Man Face
-    ],
-    output: getImg('1580130601275-c9b0e352fa10', 400), // Illustration Style
-    label: "Karikatur Lucu",
-    description: "Gaya kartun 3D atau karikatur wajah yang unik."
-  },
-  banana: {
-    inputs: [],
-    output: getImg('1490750967868-69c2d016e346', 400), // Abstract Neon Art
-    label: "Generasi Cepat",
-    description: "Hasil kreatif instan dengan model Banana AI."
-  },
-  veo: {
-    inputs: [],
-    output: getImg('1464822759023-fed622ff2c3b', 400), // Mountain Landscape
-    label: "Video Sinematik",
-    description: "Buat video 1080p berkualitas tinggi dari teks."
+    inputs: [getImg('1562591979-913a86c67530', 150)], // Pregnant Woman
+    output: getImg('1584266347743-30648f52210e', 400), // Artistic Maternity
+    label: "Maternity",
+    description: "Foto kehamilan elegan dengan siluet dramatis."
   },
   umrah: {
-    inputs: [
-       getImg('1566938995577-62f43dc7f8c2', 150) // Man Smiling Portrait (High Quality)
-    ],
-    output: getImg('1565026939922-b5e28292d3d9', 400), // Kaaba / Mecca (Majestic)
-    label: "Momen Tanah Suci",
-    description: "Hadirkan suasana spiritual Mekkah dan Madinah."
+    inputs: [getImg('1507003211169-0a1dd7228f2d', 150)], // Man Portrait
+    output: getImg('1565611746243-e4d650085a60', 400), // Mecca/Kaaba
+    label: "Tanah Suci",
+    description: "Edit foto berlatar belakang Masjidil Haram atau Kaabah."
   },
-  thumbnail: {
-    inputs: [
-       getImg('1544005313-94ddf0286df2', 150) // Portrait Woman
-    ],
-    output: getImg('1611162617474-5b21e879e113', 400), // Colorful / Vibrant
-    label: "Thumbnail Viral",
-    description: "Desain thumbnail yang mengundang klik."
+  passphoto: {
+    inputs: [getImg('1500648767791-00dcc994a43e', 150)], // Man Casual
+    output: getImg('1506803682981-6e718a9dd3ee', 400), // Man Formal
+    label: "Pas Foto",
+    description: "Ganti baju formal dan background merah/biru otomatis."
   },
-  mockup: {
-    inputs: [
-      getImg('1611162617474-5b21e879e113', 150) // Abstract Graphic
-    ],
-    output: getImg('1517260739837-79eb90bd3d91', 400), // Coffee Mug Mockup
-    label: "Mockup Realistis",
-    description: "Tempel desain pada benda nyata."
+
+  // --- DESAIN & SENI ---
+  interior: {
+    inputs: [getImg('1586023492125-27b2c045efd7', 150)], // Empty Room
+    output: getImg('1618221195710-dd6b41faaea6', 400), // Furnished Room
+    label: "Interior Design",
+    description: "Isi ruangan kosong dengan desain furniture modern."
   },
-  expand: {
-    inputs: [
-      getImg('1470071459604-3b5ec3a7fe05', 150) // Nature Tight
-    ],
-    output: getImg('1472214103451-9374bd1c798e', 400), // Wide Nature
-    label: "Perluas Foto",
-    description: "Outpainting latar belakang agar lebih luas."
+  exterior: {
+    inputs: [getImg('1568605117036-5fe5e7bab0b7', 150)], // Sketch House
+    output: getImg('1600585154340-be6161a56a0c', 400), // Modern House
+    label: "Exterior Render",
+    description: "Visualisasi arsitektur rumah dari sketsa kasar."
   },
-  edit: {
-    inputs: [
-      getImg('1507525428034-b723cf961d3e', 150) // Beach Day
-    ],
-    output: getImg('1475924156734-496f6cac6ec1', 400), // Beach Sunset
-    label: "Edit Magic",
-    description: "Ubah suasana atau elemen foto dengan perintah teks."
+  sketch: {
+    inputs: [getImg('1507003211169-0a1dd7228f2d', 150)], // Man
+    output: getImg('1580251703260-c3613094ed48', 400), // Sketch
+    label: "Pencil Sketch",
+    description: "Ubah foto menjadi lukisan sketsa pensil artistik."
   },
-  banner: {
-    inputs: [],
-    output: getImg('1542314831-068cd1dbfeeb', 400), // Design Layout
-    label: "Banner Promosi",
-    description: "Desain banner profesional untuk kebutuhan iklan."
+  caricature: {
+    inputs: [getImg('1542909168-82c3e7fdca5c', 150)], // Face
+    output: getImg('1544568100-847a948fac63', 400), // Cartoon/Art
+    label: "Karikatur 3D",
+    description: "Ubah wajah menjadi karakter 3D atau kartun lucu."
   },
-  carousel: {
-    inputs: [],
-    output: getImg('1557804506-669a67965ba0', 400), // Slides/Presentation
-    label: "Konten Carousel",
-    description: "Slide edukatif dan visual untuk media sosial."
+
+  // --- BISNIS & PROMOSI ---
+  product: {
+    inputs: [getImg('1523275335684-37898b6baf30', 150)], // Watch
+    output: getImg('1505740420928-5e560c06d30e', 400), // Product Studio
+    label: "Product Studio",
+    description: "Foto produk profesional dengan lighting studio."
   },
   fashion: {
-    inputs: [
-       getImg('1434389677669-e08b4cac3105', 150) // Clothes
-    ],
-    output: getImg('1534528741775-53994a69daeb', 400), // Fashion Model
-    label: "Foto Fashion",
-    description: "Model virtual mengenakan produk fashion Anda."
+    inputs: [getImg('1515347619252-60a6bf4fffce', 150)], // Dress
+    output: getImg('1483985988355-763728e1935b', 400), // Fashion Model
+    label: "Fashion Catalog",
+    description: "Model AI memakai produk fashion Anda secara otomatis."
+  },
+  mockup: {
+    inputs: [getImg('1629367494556-f4877399ef30', 150)], // Logo
+    output: getImg('1517260739837-70ebdfdf6c06', 400), // Mockup on paper/wall
+    label: "Mockup Branding",
+    description: "Tempel logo atau desain pada objek nyata."
+  },
+  banner: {
+    inputs: [getImg('1542291026-7eec264c27ff', 150)], // Shoe Product
+    output: getImg('1557804506-669a67965ba0', 400), // Banner Ad
+    label: "Banner Iklan",
+    description: "Desain banner promosi untuk web dan sosmed."
+  },
+  carousel: {
+    inputs: [getImg('1434030216411-0b793f4b4173', 150)], // Concept
+    output: getImg('1611162617474-5b21e879e113', 400), // Carousel Slide
+    label: "IG Carousel",
+    description: "Slide edukasi atau promosi berurutan."
+  },
+  flayer: {
+    inputs: [getImg('1497935586351-b67a49e012bf', 150)], // Coffee
+    output: getImg('1586880244406-556ebe35f282', 400), // Menu Flyer
+    label: "Flyer Design",
+    description: "Desain selebaran promosi siap cetak."
+  },
+
+  // --- DOWNLOADERS ---
+  youtube: {
+    inputs: [],
+    output: getImg('1611162616475-99137d7b5758', 400), // YouTube UI vibe
+    label: "YouTube Video",
+    description: "Unduh video Youtube resolusi tinggi."
+  },
+  tiktok: {
+    inputs: [],
+    output: getImg('1611605698323-b91986977187', 400), // Mobile video vibe
+    label: "TikTok Video",
+    description: "Unduh tanpa watermark."
+  },
+  instagram: {
+    inputs: [],
+    output: getImg('1611262588024-d12430b98920', 400), // IG vibe
+    label: "IG Reels",
+    description: "Simpan foto dan video Instagram."
+  },
+  facebook: {
+    inputs: [],
+    output: getImg('1563986768609-322da13575f3', 400), // FB vibe
+    label: "FB Video",
+    description: "Simpan video dari Facebook."
+  },
+  twitter: {
+    inputs: [],
+    output: getImg('1611605698323-b91986977187', 400), // Twitter vibe
+    label: "X / Twitter",
+    description: "Unduh media dari X."
   }
 };
 
 export const FeatureExample: React.FC<{ mode: FeatureMode }> = ({ mode }) => {
   const example = FEATURE_EXAMPLES[mode];
 
-  if (!example) return null;
+  if (!example || !example.output) return null;
 
   return (
-    <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
-      <div className="flex items-center gap-2 mb-3 px-1">
-         <Sparkles size={16} className="text-emerald-500" />
-         <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Contoh Hasil (Inspirasi)</h4>
+    <div className="bg-gradient-to-r from-slate-50 to-emerald-50/30 rounded-xl p-6 border border-slate-200/60 mb-8 animate-in fade-in duration-700">
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles size={16} className="text-emerald-500" />
+        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">{example.label} — Contoh Hasil</h3>
       </div>
       
-      <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-inner">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-            
-            {/* Inputs */}
-            {example.inputs.length > 0 && (
-              <div className="flex gap-2">
-                  {example.inputs.map((url, idx) => (
-                    <div key={idx} className="relative group">
-                       <img 
-                          src={url} 
-                          alt={`Input ${idx + 1}`} 
-                          className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg shadow-sm border border-white opacity-90 group-hover:opacity-100 transition-opacity bg-slate-200"
-                          loading="lazy"
-                       />
-                       <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[9px] px-1.5 rounded backdrop-blur-sm">
-                          Input {idx + 1}
-                       </span>
-                    </div>
-                  ))}
+      <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+        {/* Inputs */}
+        <div className="flex -space-x-4">
+          {example.inputs.map((src, i) => (
+            <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-white shadow-md transform transition-transform hover:scale-105 hover:z-10 bg-slate-200">
+              <img src={src} alt={`Input ${i}`} className="w-full h-full object-cover" />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">
+                Input {i + 1}
               </div>
-            )}
-
-            {/* Arrow */}
-            {example.inputs.length > 0 && (
-              <div className="text-slate-400 rotate-90 md:rotate-0">
-                  <ArrowRight size={24} className="animate-pulse" />
-              </div>
-            )}
-
-            {/* Output */}
-            <div className="relative group cursor-pointer">
-               <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
-               <img 
-                  src={example.output} 
-                  alt="Output Result" 
-                  className="h-32 w-auto object-cover rounded-lg shadow-md border-2 border-white ring-2 ring-emerald-100 bg-slate-200"
-                  loading="lazy"
-               />
-               <span className="absolute bottom-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
-                  HASIL AI
-               </span>
             </div>
-            
-            {/* Description */}
-            <div className="text-center md:text-left max-w-xs">
-                <h5 className="font-bold text-slate-800">{example.label}</h5>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{example.description}</p>
-            </div>
+          ))}
+        </div>
 
+        {/* Arrow (Only if inputs exist) */}
+        {example.inputs.length > 0 && (
+          <div className="hidden md:flex flex-col items-center justify-center text-slate-300">
+            <ArrowRight size={24} />
+            <span className="text-[10px] font-bold mt-1">PROCESS</span>
+          </div>
+        )}
+
+        {/* Output */}
+        <div className="relative w-full md:w-64 aspect-video md:aspect-auto md:h-32 rounded-lg overflow-hidden border-2 border-emerald-200 shadow-lg group bg-slate-200">
+           <img src={example.output} alt="Output Result" className="w-full h-full object-cover" />
+           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+             <p className="text-white text-xs font-medium line-clamp-2">{example.description}</p>
+           </div>
+           <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+             RESULT
+           </div>
         </div>
       </div>
     </div>

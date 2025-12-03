@@ -7,9 +7,12 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  // Pre-filled credentials for development ease
-  const [username, setUsername] = useState('andriwaskitho');
-  const [password, setPassword] = useState('86050475@Ndri*123#');
+  // Pre-filled credentials for development ease (defaults)
+  const defaultUser = 'andriwaskitho';
+  const defaultPass = '86050475@Ndri*123#';
+
+  const [username, setUsername] = useState(defaultUser);
+  const [password, setPassword] = useState(defaultPass);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,13 +23,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     // Simulate a brief network delay for UX
     setTimeout(() => {
-      if (username === 'andriwaskitho' && password === '86050475@Ndri*123#') {
+      // Check LocalStorage for updated credentials
+      const storedAuth = localStorage.getItem('user_auth');
+      let validUser = defaultUser;
+      let validPass = defaultPass;
+
+      if (storedAuth) {
+         try {
+            const parsed = JSON.parse(storedAuth);
+            validUser = parsed.username || defaultUser;
+            validPass = parsed.password || defaultPass;
+         } catch (e) {
+            console.error("Auth parse error", e);
+         }
+      }
+
+      if (username === validUser && password === validPass) {
         onLogin(true);
       } else {
         setError('Username atau password salah. Akses ditolak.');
         setLoading(false);
       }
-    }, 1500); // Slightly longer delay to feel like a "system check"
+    }, 1500); 
   };
 
   return (

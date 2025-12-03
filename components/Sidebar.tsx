@@ -15,9 +15,8 @@ import {
   Heart,
   Baby,
   Smile,
-  Moon,
-  UserSquare,
   User,
+  UserSquare,
   Home as HomeIcon,
   PenTool,
   Palette,
@@ -26,12 +25,22 @@ import {
   Zap,
   Video,
   ChevronDown,
-  ChevronRight,
   Camera,
   Briefcase,
   Brush,
   Settings,
-  Film
+  Film,
+  Moon,
+  FileText,
+  Eraser,
+  ImageMinus,
+  Download,
+  Youtube,
+  Instagram,
+  Facebook,
+  Twitter,
+  UserCircle,
+  Image
 } from 'lucide-react';
 import { FeatureMode } from '../types';
 
@@ -47,7 +56,6 @@ type MenuItem = {
   mode: FeatureMode;
   label: string;
   icon: React.ReactNode;
-  isPremium?: boolean;
 };
 
 type MenuGroup = {
@@ -59,34 +67,49 @@ type MenuGroup = {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, className }) => {
   // State to track which groups are expanded
-  // Initialize with 'edit_group' open by default, or dynamic based on currentMode
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'edit_group': true,
     'studio_group': false,
     'design_group': false,
-    'biz_group': false
+    'biz_group': false,
+    'dl_group': false
   });
+
+  // Load username/role for display
+  const [userInfo, setUserInfo] = useState({ name: 'Andri AI', role: 'Superadmin V3.0' });
+  useEffect(() => {
+     const storedProfile = localStorage.getItem('user_profile');
+     if (storedProfile) {
+        const p = JSON.parse(storedProfile);
+        setUserInfo({ name: p.fullName || 'Andri AI', role: p.role || 'Superadmin' });
+     }
+  }, [currentMode]); // Refresh on nav change in case profile updated
 
   // Definition of Menu Groups
   const MENU_GROUPS: MenuGroup[] = [
     {
       id: 'edit_group',
-      label: 'Edit & Manipulasi',
-      icon: <Layers size={18} />,
+      label: 'EDITING',
+      icon: <Layers size={16} />,
       items: [
+        { mode: 'imagine', label: 'Buat Gambar (Text)', icon: <Image size={18} /> }, 
         { mode: 'merge', label: 'Gabung Foto', icon: <Layers size={18} /> },
-        { mode: 'thumbnail', label: 'Foto Miniatur', icon: <Edit3 size={18} />, isPremium: true },
-        { mode: 'expand', label: 'Perluas Foto', icon: <Maximize2 size={18} />, isPremium: true },
+        { mode: 'thumbnail', label: 'Foto Miniatur', icon: <Edit3 size={18} /> },
+        { mode: 'expand', label: 'Perluas Foto', icon: <Maximize2 size={18} /> },
         { mode: 'edit', label: 'Edit Foto Magic', icon: <Edit3 size={18} /> },
-        { mode: 'faceswap', label: 'Face Swap (Foto)', icon: <Users size={18} />, isPremium: true },
-        { mode: 'videofaceswap', label: 'Video Face Swap', icon: <Film size={18} />, isPremium: true }, // New Feature
-        { mode: 'fitting', label: 'Kamar Pas', icon: <Scissors size={18} />, isPremium: true },
+        { mode: 'removeobj', label: 'Remove Object', icon: <Eraser size={18} /> },
+        { mode: 'removebg', label: 'Remove Background', icon: <ImageMinus size={18} /> },
+        { mode: 'restore', label: 'Restorasi Foto Lama', icon: <Palette size={18} /> }, 
+        { mode: 'faceswap', label: 'Face Swap (Foto)', icon: <Users size={18} /> },
+        { mode: 'videofaceswap', label: 'Video Face Swap', icon: <Film size={18} /> },
+        { mode: 'animate', label: 'Hidupkan Foto (Veo)', icon: <Video size={18} /> }, 
+        { mode: 'fitting', label: 'Kamar Pas', icon: <Scissors size={18} /> },
       ]
     },
     {
       id: 'studio_group',
       label: 'Studio Foto AI',
-      icon: <Camera size={18} />,
+      icon: <Camera size={16} />,
       items: [
         { mode: 'prewedding', label: 'Foto Prewedding', icon: <Heart size={18} /> },
         { mode: 'wedding', label: 'Foto Wedding', icon: <Users size={18} /> },
@@ -100,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
     {
       id: 'design_group',
       label: 'Desain & Seni',
-      icon: <Brush size={18} />,
+      icon: <Brush size={16} />,
       items: [
         { mode: 'interior', label: 'Desain Interior', icon: <HomeIcon size={18} /> },
         { mode: 'exterior', label: 'Desain Eksterior', icon: <LayoutTemplate size={18} /> },
@@ -111,13 +134,26 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
     {
       id: 'biz_group',
       label: 'Bisnis & Promosi',
-      icon: <Briefcase size={18} />,
+      icon: <Briefcase size={16} />,
       items: [
         { mode: 'product', label: 'Foto Produk', icon: <ShoppingBag size={18} /> },
         { mode: 'fashion', label: 'Foto Fashion', icon: <Shirt size={18} /> },
-        { mode: 'mockup', label: 'Buat Mockup', icon: <LayoutTemplate size={18} />, isPremium: true },
+        { mode: 'mockup', label: 'Buat Mockup', icon: <LayoutTemplate size={18} /> },
         { mode: 'banner', label: 'Buat Banner', icon: <Type size={18} /> },
         { mode: 'carousel', label: 'Buat Carousel', icon: <Columns size={18} /> },
+        { mode: 'flayer', label: 'Desain Flyer', icon: <FileText size={18} /> },
+      ]
+    },
+    {
+      id: 'dl_group',
+      label: 'VIDEO DOWNLOADER',
+      icon: <Download size={16} />,
+      items: [
+        { mode: 'youtube', label: 'Youtube Download', icon: <Youtube size={18} /> },
+        { mode: 'tiktok', label: 'Tiktok Download', icon: <Video size={18} /> }, 
+        { mode: 'instagram', label: 'Instagram Download', icon: <Instagram size={18} /> },
+        { mode: 'facebook', label: 'Facebook Download', icon: <Facebook size={18} /> },
+        { mode: 'twitter', label: 'X Download', icon: <Twitter size={18} /> },
       ]
     }
   ];
@@ -147,102 +183,138 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
   };
 
   return (
-    <div className="w-64 bg-[#0B1E26] text-gray-400 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-all duration-300 custom-scrollbar">
-      {/* Brand */}
-      <div className="p-6 flex items-center space-x-3 mb-2 shrink-0 border-b border-white/5 bg-[#09181F]">
-        <div className="w-8 h-8 bg-gradient-to-tr from-emerald-400 to-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
-          <Sparkles className="text-white w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-white font-bold text-lg leading-tight">Andri AI Pro</h1>
-          <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Superadmin V3.0</span>
+    <div className={`w-72 bg-[#09090b] text-slate-300 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-all duration-300 border-r border-white/5 shadow-2xl ${className}`}>
+      
+      {/* Premium Brand Header */}
+      <div className="p-6 pb-4 shrink-0 relative overflow-hidden group cursor-pointer" onClick={() => onNavigate('home')}>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300">
+            <Sparkles className="text-white w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h1 className="text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">Andri AI <span className="text-emerald-400">Pro</span></h1>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
         
         {/* Core Features (Always Visible) */}
-        <div className="mb-4">
+        <div className="space-y-1.5">
+           <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Menu Utama</p>
            <NavItem 
-              icon={<Home size={20} />} 
-              label="Beranda" 
+              icon={<Home size={18} />} 
+              label="Dashboard" 
               active={currentMode === 'home'} 
               onClick={() => onNavigate('home')}
             />
+            {/* Chatbot Removed from here */}
             <NavItem 
-              icon={<Zap size={20} />} 
-              label="Banana AI (Cepat)" 
+              icon={<Zap size={18} />} 
+              label="Banana AI (Fast)" 
               active={currentMode === 'banana'} 
               onClick={() => onNavigate('banana')}
+              highlightColor="text-yellow-400"
             />
             <NavItem 
-              icon={<Video size={20} />} 
-              label="Google Veo 3 (Video)" 
+              icon={<Video size={18} />} 
+              label="Google Veo 3" 
               active={currentMode === 'veo'} 
               onClick={() => onNavigate('veo')}
-              isPremium
+              highlightColor="text-purple-400"
             />
         </div>
 
-        <div className="border-t border-white/5 my-2"></div>
+        {/* Separator */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-2"></div>
 
         {/* Collapsible Groups */}
-        {MENU_GROUPS.map((group) => (
-          <div key={group.id} className="mb-1">
-            <button
-              onClick={() => toggleGroup(group.id)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${
-                expandedGroups[group.id] ? 'text-emerald-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {group.icon}
-                <span>{group.label}</span>
+        <div className="space-y-4">
+          {MENU_GROUPS.map((group) => (
+            <div key={group.id} className="space-y-1">
+              <button
+                onClick={() => toggleGroup(group.id)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 group ${
+                  expandedGroups[group.id] ? 'text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-1 rounded ${expandedGroups[group.id] ? 'bg-white/10 text-emerald-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                    {group.icon}
+                  </div>
+                  <span>{group.label}</span>
+                </div>
+                <div className={`transition-transform duration-300 ${expandedGroups[group.id] ? 'rotate-180' : ''}`}>
+                   <ChevronDown size={14} />
+                </div>
+              </button>
+              
+              <div className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out relative pl-2 ${
+                expandedGroups[group.id] ? 'max-h-[800px] opacity-100 pt-1' : 'max-h-0 opacity-0'
+              }`}>
+                {/* Visual Line for tree structure */}
+                <div className="absolute left-[1.15rem] top-0 bottom-2 w-px bg-white/5"></div>
+                
+                {group.items.map((item) => (
+                  <NavItem 
+                    key={item.mode}
+                    icon={item.icon} 
+                    label={item.label} 
+                    active={currentMode === item.mode} 
+                    onClick={() => onNavigate(item.mode)}
+                    isSubItem
+                  />
+                ))}
               </div>
-              {expandedGroups[group.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            
-            <div className={`space-y-1 mt-1 overflow-hidden transition-all duration-300 ease-in-out ${
-              expandedGroups[group.id] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-            }`}>
-              {group.items.map((item) => (
-                <NavItem 
-                  key={item.mode}
-                  icon={item.icon} 
-                  label={item.label} 
-                  active={currentMode === item.mode} 
-                  onClick={() => onNavigate(item.mode)}
-                  isPremium={item.isPremium}
-                  isSubItem
-                />
-              ))}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
       </nav>
 
-      {/* Logout & Settings */}
-      <div className="p-4 border-t border-white/10 mt-auto bg-[#09181F] space-y-2">
-        <button 
-          onClick={() => onNavigate('settings')}
-          className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg transition-all text-sm font-medium ${
-            currentMode === 'settings' 
-              ? 'bg-[#132E35] text-emerald-400' 
+      {/* Footer / Settings */}
+      <div className="p-4 bg-[#0c0c0e] border-t border-white/5 space-y-2 mt-auto relative z-20">
+         <div className="absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[#09090b] to-transparent pointer-events-none"></div>
+         
+         {/* Profile Link in Footer */}
+         <button 
+          onClick={() => onNavigate('profile')}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
+            currentMode === 'profile' 
+              ? 'bg-white/10 text-emerald-400 shadow-lg shadow-emerald-900/20' 
               : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Settings size={18} />
+          <UserCircle size={18} className="group-hover:text-emerald-400 transition-colors" />
+          <span>Profil Saya</span>
+        </button>
+
+        <button 
+          onClick={() => onNavigate('settings')}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
+            currentMode === 'settings' 
+              ? 'bg-white/10 text-emerald-400 shadow-lg shadow-emerald-900/20' 
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Settings size={18} className={`transition-transform duration-500 ${currentMode === 'settings' ? 'rotate-90' : 'group-hover:rotate-90'}`} />
           <span>Pengaturan Admin</span>
         </button>
 
         <button 
           onClick={onLogout}
-          className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full px-4 py-2.5 rounded-lg group"
+          className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-500/20"
         >
           <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium text-sm">Keluar Superadmin</span>
+          <span className="font-medium text-sm">Keluar System</span>
         </button>
       </div>
     </div>
@@ -253,36 +325,36 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   active?: boolean;
-  isPremium?: boolean;
   isSubItem?: boolean;
   onClick: () => void;
+  highlightColor?: string;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isPremium, isSubItem, onClick }) => {
+const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onClick, highlightColor }) => {
   return (
     <button
       onClick={onClick}
-      className={`w-full group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative ${
+      className={`w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 relative overflow-hidden ${
         active
-          ? 'bg-[#132E35] text-emerald-400'
-          : 'hover:bg-[#132E35] hover:text-white text-gray-400'
-      } ${isSubItem ? 'pl-9' : ''}`}
+          ? 'bg-gradient-to-r from-emerald-500/10 to-transparent text-white shadow-[inset_2px_0_0_0_#10b981]'
+          : 'text-slate-400 hover:text-white hover:bg-white/5'
+      } ${isSubItem ? 'ml-2 w-[calc(100%-0.5rem)]' : ''}`}
     >
-      {/* Active Indicator Line */}
-      {active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-r-full"></div>
-      )}
-
-      <span className={`${active ? 'text-emerald-400' : 'text-gray-400 group-hover:text-white'} mr-3 shrink-0`}>
+      
+      {/* Icon with Glow Effect on Active */}
+      <span className={`relative mr-3 shrink-0 transition-colors duration-300 ${
+        active 
+          ? highlightColor || 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' 
+          : 'text-slate-500 group-hover:text-slate-300'
+      }`}>
         {icon}
       </span>
-      <span className="flex-1 text-left truncate">{label}</span>
-      {isPremium && (
-        <span className="ml-auto text-amber-500" title="Fitur Premium">
-           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-              <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-            </svg>
-        </span>
+
+      <span className="flex-1 text-left truncate relative z-10">{label}</span>
+
+      {/* Hover Light Effect */}
+      { !active && (
+         <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 ease-in-out pointer-events-none"></div>
       )}
     </button>
   );
