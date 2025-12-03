@@ -1,8 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Plus, Wand2, Sparkles, AlertCircle, ArrowLeft, ArrowRight, ImagePlus, Video, Settings2, RefreshCw, FileDown, History, Clock, Trash2, Maximize2, Download, Monitor, Check, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Upload, X, Plus, Wand2, Sparkles, AlertCircle, ArrowLeft, ArrowRight, ImagePlus, Video, Settings2, RefreshCw, FileDown, History, Clock, Trash2, Maximize2, Download, Monitor, Check, ZoomIn, ZoomOut, RotateCcw, Users } from 'lucide-react';
 import { UploadedImage, AspectRatio, FeatureConfig, FeatureMode, HistoryItem } from '../types';
 import { generateImage, generateVideo, generateBatchImages } from '../services/geminiService';
+import { faceSwap } from '../services/huggingfaceService';
 import { FeatureExample } from './FeatureExamples';
 
 interface ImageMergerProps {
@@ -260,8 +260,10 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
       return;
     }
     
+    // For specific modes, prompt is optional or used differently, but checking basic length is good
     const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt) {
+    if (!trimmedPrompt && feature.id !== 'faceswap') { 
+      // Face Swap can technically work with images only, but strict check for others
       setError("Silakan masukkan instruksi.");
       return;
     }
@@ -278,12 +280,23 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
     try {
       let results: string[] = [];
       
-      if (isVideoMode) {
+      if (feature.id === 'faceswap') {
+        // --- SPECIAL CASE: FACE SWAP USING HUGGING FACE ---
+        // Requires exactly 2 images: Source Face (0) and Target Body (1)
+        if (images.length < 2) throw new Error("Face Swap memerlukan 2 gambar (Wajah & Target).");
+        
+        // Call dedicated Face Swap Service
+        const resultUrl = await faceSwap(images[0].file, images[1].file);
+        results = [resultUrl];
+
+      } else if (isVideoMode) {
+        // --- VIDEO GENERATION ---
         // Video generation (Single Result)
         const videoUrl = await generateVideo(trimmedPrompt, images, ratio, videoQuality);
         results = [videoUrl];
+
       } else {
-        // Image generation (Batch 4 Results)
+        // --- STANDARD IMAGE GENERATION (GEMINI) ---
         // We use generateBatchImages to get 4 variations
         results = await generateBatchImages(trimmedPrompt, images, ratio, feature.id, 4);
       }
@@ -533,7 +546,9 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
           <Wand2 size={16} />
         </div>
         <p className="text-emerald-800 text-sm leading-relaxed">
-          {isVideoMode 
+          {feature.id === 'faceswap' 
+             ? "Mode Face Swap menggunakan Engine InsightFace khusus untuk kemiripan maksimal. Proses mungkin memakan waktu tergantung antrean server."
+             : isVideoMode 
              ? "Pembuatan video memerlukan waktu beberapa menit. Browser Anda mungkin akan meminta izin untuk menggunakan API Key berbayar."
              : feature.minImages > 0 
                 ? `Unggah ${feature.minImages}-${feature.maxImages} gambar, tulis instruksi, dan AI akan membuat 4 variasi sekaligus.` 
@@ -626,7 +641,9 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
           <div>
             <h3 className="text-lg font-semibold text-slate-800 mb-4 flex justify-between items-center">
               <span>{feature.maxImages > 0 ? "2. Instruksi" : "1. Instruksi"}</span>
-              <span className="text-xs font-normal text-slate-400">Wajib diisi</span>
+              <span className="text-xs font-normal text-slate-400">
+                 {feature.id === 'faceswap' ? 'Opsional' : 'Wajib diisi'}
+              </span>
             </h3>
             <div className="relative">
               <textarea
@@ -638,7 +655,7 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
                       ? 'border-red-500 bg-red-900/10 text-slate-800 placeholder:text-red-400' 
                       : 'bg-slate-900 border-slate-700 text-emerald-50 placeholder:text-slate-500'
                   }`}
-                placeholder={isVideoMode ? "Deskripsikan video yang ingin dibuat (Contoh: Kucing terbang di luar angkasa, neon style)..." : "Deskripsikan hasil yang Anda inginkan..."}
+                placeholder={feature.id === 'faceswap' ? "Instruksi tidak diperlukan untuk Face Swap (Otomatis)." : isVideoMode ? "Deskripsikan video yang ingin dibuat..." : "Deskripsikan hasil yang Anda inginkan..."}
               />
               <div className="absolute bottom-3 right-3 flex items-center gap-2">
                  {/* Character Counter */}
@@ -749,20 +766,26 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
             className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 transform active:scale-[0.99]
               ${loading 
                 ? 'bg-slate-400 cursor-not-allowed shadow-none' 
-                : isVideoMode 
-                    ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200 hover:shadow-purple-300'
-                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
+                : feature.id === 'faceswap'
+                    ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 hover:shadow-blue-300'
+                    : isVideoMode 
+                        ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200 hover:shadow-purple-300'
+                        : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
               }`}
           >
             {loading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>{isVideoMode ? "Sedang Merender Video (Mohon Tunggu)..." : "Sedang Memproses 4 Variasi..."}</span>
+                <span>
+                    {feature.id === 'faceswap' ? "Menukar Wajah (Antrean Server)..." : isVideoMode ? "Sedang Merender Video..." : "Sedang Memproses 4 Variasi..."}
+                </span>
               </>
             ) : (
               <>
-                {isVideoMode ? <Video size={20} /> : <Sparkles size={20} />}
-                <span>{isVideoMode ? "Buat Video" : "Buat 4 Variasi Hasil"}</span>
+                {feature.id === 'faceswap' ? <Users size={20} /> : isVideoMode ? <Video size={20} /> : <Sparkles size={20} />}
+                <span>
+                    {feature.id === 'faceswap' ? "Tukar Wajah Sekarang" : isVideoMode ? "Buat Video" : "Buat 4 Variasi Hasil"}
+                </span>
               </>
             )}
           </button>
@@ -818,7 +841,7 @@ const ImageMerger: React.FC<ImageMergerProps> = ({ feature }) => {
                 className="px-6 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-medium text-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 w-full md:w-auto justify-center group"
             >
                 <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${loading ? "animate-spin" : ""}`} />
-                Generate 4 New Variations
+                {feature.id === 'faceswap' ? "Coba Lagi" : "Generate 4 New Variations"}
             </button>
 
              {/* Download All Helper for Images */}
