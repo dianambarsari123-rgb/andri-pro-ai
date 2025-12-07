@@ -1,3 +1,22 @@
+import React from 'react';
+
+// Define the props type locally to ensure React types are resolved correctly from the import
+type DotLottieWCProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+  src: string;
+  autoplay?: boolean;
+  loop?: boolean;
+  mode?: string;
+  style?: React.CSSProperties;
+}, HTMLElement>;
+
+// Add support for custom web components in JSX
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'dotlottie-wc': DotLottieWCProps;
+    }
+  }
+}
 
 export interface UploadedImage {
   id: string;
@@ -28,6 +47,7 @@ export type FeatureMode =
   | 'animate'       
   | 'fitting'       
   | 'product' 
+  | 'fotomodel'     
   | 'fashion' 
   | 'mockup' 
   | 'banner' 
@@ -44,7 +64,7 @@ export type FeatureMode =
   | 'exterior'
   | 'sketch'
   | 'caricature'
-  | 'imagine'       // New Text-to-Image
+  | 'imagine'       
   | 'banana'        
   | 'veo'
   | 'chatbot'       

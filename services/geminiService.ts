@@ -11,7 +11,7 @@ export interface ChatMessage {
 const getApiKey = (): string => {
   // 1. Priority: Check LocalStorage (User entered in Admin Settings)
   const localKey = localStorage.getItem('SUPERADMIN_API_KEY');
-  if (localKey && localKey.trim().length > 10) {
+  if (localKey && localKey.trim().length > 5) {
     return localKey.trim();
   }
 
@@ -27,7 +27,7 @@ const getApiKey = (): string => {
     return process.env.API_KEY;
   }
 
-  throw new Error("API Key tidak ditemukan! Silakan masuk ke Menu 'Pengaturan Admin' dan masukkan Google Gemini API Key Anda.");
+  throw new Error("API Key tidak ditemukan! Silakan masuk ke Menu 'Pengaturan Admin' dan masukkan Google Gemini API Key dari Google AI Studio.");
 };
 
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
@@ -77,19 +77,18 @@ const parseError = (error: any) => {
   const errString = JSON.stringify(error, Object.getOwnPropertyNames(error));
   
   // Extract a readable message
-  let message = error.message;
-  if (error.error && error.error.message) {
-    message = error.error.message;
-  } else if (!message && errString.length < 200) {
-    message = errString;
-  }
+  let message = '';
+  if (error?.message) message = error.message;
+  if (error?.error?.message) message = error.error.message;
+  if (!message && typeof error === 'string') message = error;
+  if (!message) message = "Unknown error occurred";
   
   // Check for permission codes in various places including the message string
   const isPermissionError = 
     errString.includes('403') || 
     errString.includes('PERMISSION_DENIED') || 
-    (message && message.includes('403')) ||
-    (message && message.includes('permission')) ||
+    message.includes('403') ||
+    message.toLowerCase().includes('permission') ||
     error?.status === 403 || 
     error?.error?.code === 403;
 
@@ -98,7 +97,7 @@ const parseError = (error: any) => {
     errString.includes('INTERNAL') || 
     error?.status === 500;
 
-  return { isPermissionError, isServerError, message: message || "Unknown error occurred" };
+  return { isPermissionError, isServerError, message };
 };
 
 /**
@@ -185,8 +184,9 @@ export const generateImage = async (
       case 'faceswap': systemContext = "Task: Face Swap. Reconstruct the face from the first image onto the body of the second image. Maintain identity, skin tone, and lighting of the target scene."; break;
       case 'fitting': systemContext = "Task: Virtual Try-On. Warp the clothing from the second image onto the person in the first image. Adjust folds and lighting."; break;
       case 'product': systemContext = "Task: Commercial Product Photography. Enhance lighting, reflections, and composition to look like a high-end studio shot."; break;
+      case 'fotomodel': systemContext = "Task: AI Model Generation. The user has provided an image of a product/clothing. Generate a photorealistic human model wearing/using this product. Ensure the model fits the description in the prompt (age, ethnicity, pose). Professional studio lighting."; break;
       case 'fashion': systemContext = "Task: Fashion Editorial. Showcase the clothing and model with professional posing and lighting."; break;
-      case 'prewedding': systemContext = "Task: Romantic Pre-wedding Photography. Soft lighting, dreamy atmosphere, emotional connection."; break;
+      case 'prewedding': systemContext = "Task: Romantic Pre-wedding Photography Composite. Merge the male subject from the first image and the female subject from the second image into a single cohesive couple pose. Ensure consistent lighting, shadows, and perspective. The result must look like a real photograph of a couple together."; break;
       case 'wedding': systemContext = "Task: Luxury Wedding Photography. Grandeur, elegance, sharp details, and perfect lighting."; break;
       case 'babyborn': systemContext = "Task: Newborn Photography. Soft textures, pastel tones, gentle lighting, adorable composition."; break;
       case 'kids': systemContext = "Task: Child Photography. Vibrant, energetic, sharp focus, capturing genuine expressions."; break;
@@ -231,6 +231,8 @@ export const generateImage = async (
             }
         }
         if (candidates[0].content.parts[0].text) {
+             // In some cases, Gemini might return text describing the image if it failed to generate or filtered it.
+             // We treat this as an error for the image generator.
              throw new Error("AI returned text instead of image: " + candidates[0].content.parts[0].text);
         }
     }

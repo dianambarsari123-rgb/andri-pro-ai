@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette, ExternalLink } from 'lucide-react';
 
 interface AdminSettingsProps {
     theme?: string;
@@ -57,33 +57,73 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
           {/* Appearance / Theme Settings */}
           {setTheme && (
               <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5">
                   <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
                     <Monitor size={18} className="text-purple-500" /> Tampilan Aplikasi (Theme)
                   </h3>
                 </div>
                 <div className="p-6">
-                   <div className="grid grid-cols-3 gap-4">
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <button 
                         onClick={() => setTheme('light')}
                         className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'light' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
                       >
                          <Sun size={24} />
-                         <span className="font-bold text-sm">Light Mode</span>
+                         <span className="font-bold text-xs">Light Mode</span>
                       </button>
                       <button 
                         onClick={() => setTheme('dark')}
                         className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'dark' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
                       >
                          <Moon size={24} />
-                         <span className="font-bold text-sm">Dark Mode</span>
+                         <span className="font-bold text-xs">Dark Mode</span>
                       </button>
                       <button 
                         onClick={() => setTheme('purple')}
                         className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'purple' ? 'border-purple-500 bg-purple-900/20 text-purple-300' : 'border-slate-200 dark:border-slate-700 hover:border-purple-500/50 text-slate-500'}`}
                       >
                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg"></div>
-                         <span className="font-bold text-sm">Purple Gradient</span>
+                         <span className="font-bold text-xs">Purple Gradient</span>
+                      </button>
+                      
+                       <button 
+                        onClick={() => setTheme('ocean')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'ocean' ? 'border-blue-500 bg-blue-900/20 text-blue-300' : 'border-slate-200 dark:border-slate-700 hover:border-blue-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg"></div>
+                         <span className="font-bold text-xs">Ocean Blue</span>
+                      </button>
+
+                      <button 
+                        onClick={() => setTheme('emerald')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'emerald' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-300' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg"></div>
+                         <span className="font-bold text-xs">Emerald Green</span>
+                      </button>
+
+                      <button 
+                        onClick={() => setTheme('sunset')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'sunset' ? 'border-orange-500 bg-orange-900/20 text-orange-300' : 'border-slate-200 dark:border-slate-700 hover:border-orange-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-red-600 shadow-lg"></div>
+                         <span className="font-bold text-xs">Sunset Orange</span>
+                      </button>
+
+                       <button 
+                        onClick={() => setTheme('midnight')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'midnight' ? 'border-indigo-500 bg-indigo-900/20 text-indigo-300' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg border border-white/10"></div>
+                         <span className="font-bold text-xs">Midnight</span>
+                      </button>
+
+                       <button 
+                        onClick={() => setTheme('cyberpunk')}
+                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'cyberpunk' ? 'border-fuchsia-500 bg-fuchsia-900/20 text-fuchsia-300' : 'border-slate-200 dark:border-slate-700 hover:border-fuchsia-500/50 text-slate-500'}`}
+                      >
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-lg"></div>
+                         <span className="font-bold text-xs">Cyberpunk</span>
                       </button>
                    </div>
                 </div>
@@ -92,7 +132,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
 
           {/* API Key Management */}
           <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 flex justify-between items-center">
               <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
                 <Key size={18} className="text-amber-500" /> API Configuration
               </h3>
@@ -117,15 +157,25 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
                   {showKey ? "Hide" : "Show"}
                 </button>
               </div>
-              <p className="text-xs text-slate-400 mt-2">
-                Kunci API ini akan disimpan di Browser (LocalStorage) agar aplikasi berjalan. Gunakan API Key dari Google AI Studio.
-              </p>
+              <div className="mt-4 flex flex-wrap gap-4 items-center justify-between">
+                <p className="text-xs text-slate-400 max-w-sm">
+                  Kunci API disimpan di Browser (LocalStorage). Gunakan API Key dari <strong>Google AI Studio</strong>.
+                </p>
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs flex items-center gap-1 text-blue-500 hover:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors border border-blue-100 dark:border-blue-900/30"
+                >
+                  <ExternalLink size={12} /> Dapatkan API Key Gratis
+                </a>
+              </div>
             </div>
           </div>
 
           {/* System Control */}
           <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5">
               <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
                 <Shield size={18} className="text-blue-500" /> System Control
               </h3>

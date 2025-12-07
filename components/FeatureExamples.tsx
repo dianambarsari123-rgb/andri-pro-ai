@@ -114,10 +114,13 @@ export const FEATURE_EXAMPLES: Partial<Record<FeatureMode, ExampleData>> = {
 
   // --- STUDIO FOTO AI ---
   prewedding: {
-    inputs: [getImg('1529626455594-4ff0802cfb7e', 150)], // Casual Couple
+    inputs: [
+        getImg('1500648767791-00dcc994a43e', 150), // Man
+        getImg('1534528741775-53994a69daeb', 150)  // Woman
+    ], 
     output: getImg('1515934751635-c81c6bc9a2d8', 400), // Wedding Couple
-    label: "Prewedding",
-    description: "Ubah foto couple biasa menjadi momen romantis estetik."
+    label: "Prewedding Merge",
+    description: "Gabungkan foto pria dan wanita menjadi satu frame prewedding."
   },
   wedding: {
     inputs: [getImg('1519741497674-611481863552', 150)], // Wedding
@@ -183,6 +186,12 @@ export const FEATURE_EXAMPLES: Partial<Record<FeatureMode, ExampleData>> = {
   },
 
   // --- BISNIS & PROMOSI ---
+  fotomodel: {
+    inputs: [getImg('1523381210434-271e8be1f52b', 150)], // T-shirt
+    output: getImg('1515886657613-9f3515b0c78f', 400), // Model Wearing It
+    label: "AI Fashion Model",
+    description: "Model AI mengenakan produk fashion Anda."
+  },
   product: {
     inputs: [getImg('1523275335684-37898b6baf30', 150)], // Watch
     output: getImg('1505740420928-5e560c06d30e', 400), // Product Studio

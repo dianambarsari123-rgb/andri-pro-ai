@@ -159,7 +159,7 @@ const UserProfile: React.FC = () => {
                         type="text" 
                         value={profile.fullName}
                         onChange={(e) => setProfile({...profile, fullName: e.target.value})}
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                      />
                   </div>
                   <div className="space-y-2">
@@ -170,7 +170,7 @@ const UserProfile: React.FC = () => {
                            type="email" 
                            value={profile.email}
                            onChange={(e) => setProfile({...profile, email: e.target.value})}
-                           className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                           className="w-full pl-10 p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                         />
                      </div>
                   </div>
@@ -182,7 +182,7 @@ const UserProfile: React.FC = () => {
                            type="text" 
                            value={profile.location}
                            onChange={(e) => setProfile({...profile, location: e.target.value})}
-                           className="w-full pl-10 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                           className="w-full pl-10 p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                         />
                      </div>
                   </div>
@@ -192,7 +192,7 @@ const UserProfile: React.FC = () => {
                         type="text" 
                         value={profile.avatar}
                         onChange={(e) => setProfile({...profile, avatar: e.target.value})}
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-xs"
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-xs"
                      />
                   </div>
                </div>
@@ -203,7 +203,7 @@ const UserProfile: React.FC = () => {
                      rows={4}
                      value={profile.bio}
                      onChange={(e) => setProfile({...profile, bio: e.target.value})}
-                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                     className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                </div>
 
@@ -232,7 +232,7 @@ const UserProfile: React.FC = () => {
                         type="text" 
                         value={security.username}
                         onChange={(e) => setSecurity({...security, username: e.target.value})}
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                      />
                   </div>
                   
@@ -244,7 +244,7 @@ const UserProfile: React.FC = () => {
                         type="password" 
                         value={security.currentPassword}
                         onChange={(e) => setSecurity({...security, currentPassword: e.target.value})}
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="Masukkan password lama untuk verifikasi"
                         required
                      />
@@ -257,7 +257,7 @@ const UserProfile: React.FC = () => {
                            type="password" 
                            value={security.newPassword}
                            onChange={(e) => setSecurity({...security, newPassword: e.target.value})}
-                           className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                           className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                            placeholder="Minimal 6 karakter"
                         />
                      </div>
@@ -267,7 +267,7 @@ const UserProfile: React.FC = () => {
                            type="password" 
                            value={security.confirmPassword}
                            onChange={(e) => setSecurity({...security, confirmPassword: e.target.value})}
-                           className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                           className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                            placeholder="Ulangi password baru"
                         />
                      </div>

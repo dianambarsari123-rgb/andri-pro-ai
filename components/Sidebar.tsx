@@ -40,7 +40,9 @@ import {
   Facebook,
   Twitter,
   UserCircle,
-  Image
+  Image,
+  X,
+  UserCheck
 } from 'lucide-react';
 import { FeatureMode } from '../types';
 
@@ -49,6 +51,8 @@ interface SidebarProps {
   onNavigate: (mode: FeatureMode) => void;
   onLogout: () => void;
   className?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 // Define the structure of the menu
@@ -65,13 +69,13 @@ type MenuGroup = {
   items: MenuItem[];
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, className, isOpen, onClose }) => {
   // State to track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'edit_group': true,
     'studio_group': false,
     'design_group': false,
-    'biz_group': false,
+    'biz_group': true,
     'dl_group': false
   });
 
@@ -136,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
       label: 'Bisnis & Promosi',
       icon: <Briefcase size={16} />,
       items: [
+        { mode: 'fotomodel', label: 'Foto Model AI', icon: <UserCheck size={18} /> },
         { mode: 'product', label: 'Foto Produk', icon: <ShoppingBag size={18} /> },
         { mode: 'fashion', label: 'Foto Fashion', icon: <Shirt size={18} /> },
         { mode: 'mockup', label: 'Buat Mockup', icon: <LayoutTemplate size={18} /> },
@@ -183,141 +188,154 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
   };
 
   return (
-    <div className={`w-72 bg-[#09090b] text-slate-300 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-all duration-300 border-r border-white/5 shadow-2xl ${className}`}>
-      
-      {/* Premium Brand Header */}
-      <div className="p-6 pb-4 shrink-0 relative overflow-hidden group cursor-pointer" onClick={() => onNavigate('home')}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+           className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+           onClick={onClose}
+        ></div>
+      )}
+
+      {/* Sidebar Container - Modern Glass */}
+      <div className={`w-72 bg-[#09090b] text-white border-r border-white/5 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-transform duration-300 ease-in-out shadow-2xl ${
+         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      } ${className}`}>
         
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300">
-            <Sparkles className="text-white w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">Andri AI <span className="text-emerald-400">Pro</span></h1>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
+        {/* Mobile Close Button */}
+        <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-white hover:bg-white/10 p-2 rounded-full">
+           <X size={20} />
+        </button>
+
+        {/* Premium Brand Header */}
+        <div className="p-8 pb-6 shrink-0 relative overflow-hidden group cursor-pointer" onClick={() => onNavigate('home')}>
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300">
+              <Sparkles className="text-white w-5 h-5 animate-pulse" />
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
-        
-        {/* Core Features (Always Visible) */}
-        <div className="space-y-1.5">
-           <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Menu Utama</p>
-           <NavItem 
-              icon={<Home size={18} />} 
-              label="Dashboard" 
-              active={currentMode === 'home'} 
-              onClick={() => onNavigate('home')}
-            />
-            {/* Chatbot Removed from here */}
-            <NavItem 
-              icon={<Zap size={18} />} 
-              label="Banana AI (Fast)" 
-              active={currentMode === 'banana'} 
-              onClick={() => onNavigate('banana')}
-              highlightColor="text-yellow-400"
-            />
-            <NavItem 
-              icon={<Video size={18} />} 
-              label="Google Veo 3" 
-              active={currentMode === 'veo'} 
-              onClick={() => onNavigate('veo')}
-              highlightColor="text-purple-400"
-            />
-        </div>
-
-        {/* Separator */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-2"></div>
-
-        {/* Collapsible Groups */}
-        <div className="space-y-4">
-          {MENU_GROUPS.map((group) => (
-            <div key={group.id} className="space-y-1">
-              <button
-                onClick={() => toggleGroup(group.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 group ${
-                  expandedGroups[group.id] ? 'text-white' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-1 rounded ${expandedGroups[group.id] ? 'bg-white/10 text-emerald-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
-                    {group.icon}
-                  </div>
-                  <span>{group.label}</span>
-                </div>
-                <div className={`transition-transform duration-300 ${expandedGroups[group.id] ? 'rotate-180' : ''}`}>
-                   <ChevronDown size={14} />
-                </div>
-              </button>
-              
-              <div className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out relative pl-2 ${
-                expandedGroups[group.id] ? 'max-h-[800px] opacity-100 pt-1' : 'max-h-0 opacity-0'
-              }`}>
-                {/* Visual Line for tree structure */}
-                <div className="absolute left-[1.15rem] top-0 bottom-2 w-px bg-white/5"></div>
-                
-                {group.items.map((item) => (
-                  <NavItem 
-                    key={item.mode}
-                    icon={item.icon} 
-                    label={item.label} 
-                    active={currentMode === item.mode} 
-                    onClick={() => onNavigate(item.mode)}
-                    isSubItem
-                  />
-                ))}
+            <div>
+              <h1 className="text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">Andri AI <span className="text-emerald-400">Pro</span></h1>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse box-shadow-glow"></span>
+                <span className="text-[10px] text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
-      </nav>
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-8 overflow-y-auto custom-scrollbar">
+          
+          {/* Core Features (Always Visible) */}
+          <div className="space-y-1">
+             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-4">Menu Utama</p>
+             <NavItem 
+                icon={<Home size={18} />} 
+                label="Dashboard" 
+                active={currentMode === 'home'} 
+                onClick={() => onNavigate('home')}
+              />
+              <NavItem 
+                icon={<Zap size={18} />} 
+                label="Banana AI (Fast)" 
+                active={currentMode === 'banana'} 
+                onClick={() => onNavigate('banana')}
+                highlightColor="text-yellow-400"
+              />
+              <NavItem 
+                icon={<Video size={18} />} 
+                label="Google Veo 3" 
+                active={currentMode === 'veo'} 
+                onClick={() => onNavigate('veo')}
+                highlightColor="text-purple-400"
+              />
+          </div>
 
-      {/* Footer / Settings */}
-      <div className="p-4 bg-[#0c0c0e] border-t border-white/5 space-y-2 mt-auto relative z-20">
-         <div className="absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[#09090b] to-transparent pointer-events-none"></div>
-         
-         {/* Profile Link in Footer */}
-         <button 
-          onClick={() => onNavigate('profile')}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
-            currentMode === 'profile' 
-              ? 'bg-white/10 text-emerald-400 shadow-lg shadow-emerald-900/20' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <UserCircle size={18} className="group-hover:text-emerald-400 transition-colors" />
-          <span>Profil Saya</span>
-        </button>
+          {/* Separator */}
+          <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent mx-4"></div>
 
-        <button 
-          onClick={() => onNavigate('settings')}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
-            currentMode === 'settings' 
-              ? 'bg-white/10 text-emerald-400 shadow-lg shadow-emerald-900/20' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <Settings size={18} className={`transition-transform duration-500 ${currentMode === 'settings' ? 'rotate-90' : 'group-hover:rotate-90'}`} />
-          <span>Pengaturan Admin</span>
-        </button>
+          {/* Collapsible Groups */}
+          <div className="space-y-4">
+            {MENU_GROUPS.map((group) => (
+              <div key={group.id} className="space-y-1">
+                <button
+                  onClick={() => toggleGroup(group.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-200 group ${
+                    expandedGroups[group.id] ? 'text-white bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-lg transition-colors ${expandedGroups[group.id] ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                      {group.icon}
+                    </div>
+                    <span>{group.label}</span>
+                  </div>
+                  <div className={`transition-transform duration-300 ${expandedGroups[group.id] ? 'rotate-180' : ''}`}>
+                     <ChevronDown size={14} />
+                  </div>
+                </button>
+                
+                <div className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out relative pl-2 ${
+                  expandedGroups[group.id] ? 'max-h-[800px] opacity-100 pt-2' : 'max-h-0 opacity-0'
+                }`}>
+                  {/* Visual Line for tree structure */}
+                  <div className="absolute left-[1.35rem] top-0 bottom-4 w-px bg-gradient-to-b from-white/10 to-transparent"></div>
+                  
+                  {group.items.map((item) => (
+                    <NavItem 
+                      key={item.mode}
+                      icon={item.icon} 
+                      label={item.label} 
+                      active={currentMode === item.mode} 
+                      onClick={() => onNavigate(item.mode)}
+                      isSubItem
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
 
-        <button 
-          onClick={onLogout}
-          className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-500/20"
-        >
-          <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium text-sm">Keluar System</span>
-        </button>
+        </nav>
+
+        {/* Footer / Settings */}
+        <div className="p-4 bg-black/20 border-t border-white/5 space-y-1 mt-auto relative z-20 backdrop-blur-xl">
+           
+           {/* Profile Link in Footer */}
+           <button 
+            onClick={() => onNavigate('profile')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
+              currentMode === 'profile' 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <UserCircle size={18} className="group-hover:text-emerald-400 transition-colors" />
+            <span>Profil Saya</span>
+          </button>
+
+          <button 
+            onClick={() => onNavigate('settings')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
+              currentMode === 'settings' 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Settings size={18} className={`transition-transform duration-500 ${currentMode === 'settings' ? 'rotate-90' : 'group-hover:rotate-90'}`} />
+            <span>Pengaturan Admin</span>
+          </button>
+
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-500/20"
+          >
+            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium text-sm">Keluar System</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -334,11 +352,11 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onCli
   return (
     <button
       onClick={onClick}
-      className={`w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 relative overflow-hidden ${
+      className={`w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 relative overflow-hidden ${
         active
-          ? 'bg-gradient-to-r from-emerald-500/10 to-transparent text-white shadow-[inset_2px_0_0_0_#10b981]'
-          : 'text-slate-400 hover:text-white hover:bg-white/5'
-      } ${isSubItem ? 'ml-2 w-[calc(100%-0.5rem)]' : ''}`}
+          ? 'bg-gradient-to-r from-emerald-500/20 to-transparent text-white border-l-2 border-emerald-500'
+          : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+      } ${isSubItem ? 'ml-3 w-[calc(100%-0.75rem)]' : ''}`}
     >
       
       {/* Icon with Glow Effect on Active */}
@@ -350,7 +368,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onCli
         {icon}
       </span>
 
-      <span className="flex-1 text-left truncate relative z-10">{label}</span>
+      <span className="flex-1 text-left truncate relative z-10 tracking-tight">{label}</span>
 
       {/* Hover Light Effect */}
       { !active && (

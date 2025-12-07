@@ -6,10 +6,24 @@ import Login from './components/Login';
 import AdminSettings from './components/AdminSettings';
 import UserProfile from './components/UserProfile';
 import ChatBot from './components/ChatBot';
-import { Sparkles, ArrowRight, Layers, Zap, Activity, Cpu, ShieldCheck, Globe, Video, Heart, Briefcase, Camera, Music, Instagram, Facebook, Twitter, Youtube, MessageSquare, Palette, History, Image } from 'lucide-react';
+import { Sparkles, ArrowRight, Layers, Zap, Activity, Cpu, ShieldCheck, Globe, Video, Heart, Briefcase, Camera, Music, Instagram, Facebook, Twitter, Youtube, MessageSquare, Palette, History, Image, Command, Menu, Users } from 'lucide-react';
 import { FeatureMode, FeatureConfig } from './types';
 
-// Configuration for all app features
+// Global JSX declaration to ensure dotlottie-wc is recognized
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        src: string;
+        autoplay?: boolean;
+        loop?: boolean;
+        style?: React.CSSProperties;
+      }, HTMLElement>;
+    }
+  }
+}
+
+// --- CONFIGURATION FOR ALL FEATURES ---
 const FEATURES: Record<FeatureMode, FeatureConfig> = {
   home: {
     id: 'home',
@@ -35,8 +49,6 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
     minImages: 0,
     maxImages: 0
   },
-  
-  // New Feature: Chatbot (Config kept for metadata, but routing is global)
   chatbot: {
     id: 'chatbot',
     title: 'AI Chatbot Assistant',
@@ -143,10 +155,10 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   prewedding: {
     id: 'prewedding',
     title: 'Foto Prewedding',
-    description: 'Ubah foto couple menjadi foto prewedding estetik.',
-    defaultPrompt: 'Ubah foto pasangan ini menjadi foto Prewedding yang romantis dan estetik. Latar belakang: [Sebutkan Lokasi, misal: Pantai saat Sunset / Taman Bunga]. Pencahayaan lembut, suasana dreamy.',
-    minImages: 1,
-    maxImages: 1
+    description: 'Gabungkan foto Pria & Wanita menjadi foto prewedding estetik.',
+    defaultPrompt: 'Gabungkan subjek Pria (Foto 1) dan Wanita (Foto 2) menjadi satu frame pasangan yang romantis. Posisikan mereka berdampingan atau berpegangan tangan dengan natural. Latar belakang: [Sebutkan Lokasi, misal: Pantai Sunset / Taman Bunga]. Kenakan busana formal/gaun yang serasi. Pencahayaan cinematic, photorealistic 8k.',
+    minImages: 2,
+    maxImages: 2
   },
   wedding: {
     id: 'wedding',
@@ -210,93 +222,41 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
     id: 'exterior',
     title: 'Desain Eksterior',
     description: 'Render arsitektur bangunan dari sketsa.',
-    defaultPrompt: 'Render arsitektur Eksterior yang realistis. Ubah sketsa/foto rumah ini menjadi bangunan modern mewah dengan fasad kaca dan kayu. Tambahkan taman yang asri dan pencahayaan sore hari.',
+    defaultPrompt: 'Render arsitektur Eksterior yang realistis. Ubah sketsa/foto rumah ini menjadi bangunan modern mewah dengan fasad kaca dan kayu. Tambahkan taman yang asri dan pencahayaan pagi hari.',
     minImages: 1,
     maxImages: 1
   },
   sketch: {
     id: 'sketch',
     title: 'Sketsa Gambar',
-    description: 'Ubah foto menjadi lukisan sketsa tangan.',
-    defaultPrompt: 'Ubah foto ini menjadi lukisan sketsa pensil (Pencil Sketch) yang artistik di atas kertas bertekstur. Garis-garis tegas, shading detail, hitam putih.',
+    description: 'Ubah foto menjadi sketsa pensil artistik.',
+    defaultPrompt: 'Ubah gambar ini menjadi sketsa pensil tangan yang detail (Hand-drawn Pencil Sketch). Garis-garis halus, shading arsiran, di atas kertas bertekstur. Hitam putih artistik.',
     minImages: 1,
     maxImages: 1
   },
   caricature: {
     id: 'caricature',
     title: 'Art & Karikatur',
-    description: 'Ubah wajah menjadi karakter 3D unik.',
-    defaultPrompt: 'An ultra-realistic large head caricature of a man like the uploaded image. 3D Pixar Style rendering. Exaggerated features but recognizable. Background: detailed fantasy world.',
+    description: 'Ubah wajah menjadi karikatur 3D lucu.',
+    defaultPrompt: 'An ultra-realistic large head caricature of a man like the uploaded image, wearing a casual outfit. Exaggerated features, Pixar-style rendering, cute and expressive. 3D Render, Octane Render, bright studio lighting.',
     minImages: 1,
     maxImages: 1
   },
-  
-  // NEW: Imagine (Text-to-Image)
+
+  // IMAGINE & FAST
   imagine: {
     id: 'imagine',
     title: 'Buat Gambar (Imagine)',
     description: 'Buat gambar AI dari teks tanpa perlu upload foto.',
-    defaultPrompt: 'A photorealistic cinematic shot of a futuristic city with neon lights, 8k resolution, highly detailed.',
+    defaultPrompt: 'A futuristic city floating in the clouds, cyberpunk aesthetic, neon lights, 8k resolution, cinematic lighting, highly detailed.',
     minImages: 0,
-    maxImages: 0,
+    maxImages: 0
   },
-
-  // BISNIS & PROMOSI
-  product: {
-    id: 'product',
-    title: 'Foto Produk',
-    description: 'Foto produk profesional kualitas studio.',
-    defaultPrompt: 'Foto produk komersial berkualitas tinggi. Tempatkan produk ini di atas podium marmer dengan latar belakang studio minimalis. Pencahayaan softbox profesional, pantulan elegan.',
-    minImages: 1,
-    maxImages: 1
-  },
-  fashion: {
-    id: 'fashion',
-    title: 'Foto Fashion',
-    description: 'Katalog fashion dengan model AI.',
-    defaultPrompt: 'Foto editorial fashion High-End. Model mengenakan pakaian ini berpose di jalanan kota New York (Street Style). Pencahayaan natural, depth of field (bokeh) pada background.',
-    minImages: 1,
-    maxImages: 1
-  },
-  mockup: {
-    id: 'mockup',
-    title: 'Buat Mockup',
-    description: 'Terapkan desain pada objek nyata.',
-    defaultPrompt: 'Terapkan desain logo/gambar ini ke permukaan [Mug / Kaos / Billboard] secara realistis. Sesuaikan perspektif dan lengkungan agar terlihat menyatu.',
-    minImages: 1,
-    maxImages: 2
-  },
-  banner: {
-    id: 'banner',
-    title: 'Buat Banner',
-    description: 'Desain banner promosi layout profesional.',
-    defaultPrompt: 'Desain Banner Iklan Web untuk produk ini. Layout modern dan bersih. Sisakan ruang kosong (negative space) di sebelah kanan untuk teks. Gunakan warna-warna brand yang elegan.',
-    minImages: 1,
-    maxImages: 2
-  },
-  carousel: {
-    id: 'carousel',
-    title: 'Buat Carousel',
-    description: 'Konten slide sosial media yang menarik.',
-    defaultPrompt: 'Buat desain Slide Carousel Instagram yang edukatif dan menarik secara visual. Gaya ilustrasi 3D modern atau Flat Design. Warna cerah dan layout rapi.',
-    minImages: 1,
-    maxImages: 3
-  },
-  flayer: {
-    id: 'flayer',
-    title: 'Desain Flyer',
-    description: 'Brosur/Selebaran promosi siap cetak.',
-    defaultPrompt: 'Desain Flyer Promosi ukuran A4. Headline besar dan menarik di bagian atas. Tampilkan produk utama di tengah dengan menarik. Gaya desain: Modern Corporate / Food & Beverage.',
-    minImages: 1,
-    maxImages: 2
-  },
-
-  // SPECIAL & DOWNLOADERS
   banana: {
     id: 'banana',
     title: 'Banana AI (Fast)',
-    description: 'Generasi gambar super cepat (Turbo Mode).',
-    defaultPrompt: 'Ciptakan karya seni digital yang kreatif dan penuh warna. Gaya: Cyberpunk / Abstract / Surrealism.',
+    description: 'Generasi gambar super cepat (Fast Mode).',
+    defaultPrompt: 'A vibrant abstract digital art piece, colorful swirling fluids, high contrast, 4k.',
     minImages: 0,
     maxImages: 1
   },
@@ -304,16 +264,75 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
     id: 'veo',
     title: 'Google Veo 3',
     description: 'Generasi video sinematik tercanggih.',
-    defaultPrompt: 'A cinematic drone shot of a futuristic city at night, neon lights, flying cars, photorealistic 8k.',
+    defaultPrompt: 'A cinematic drone shot of a tropical island, turquoise water, white sand, sunny day, 4k resolution, smooth motion.',
     minImages: 0,
     maxImages: 1,
     type: 'video'
   },
-  
+
+  // BISNIS & PROMOSI
+  fotomodel: {
+    id: 'fotomodel',
+    title: 'Foto Model AI',
+    description: 'Model AI mengenakan produk fashion Anda.',
+    defaultPrompt: 'Foto editorial model studio fotorealistis. Subjek utama: Seorang wanita muda berusia pertengahan 20-an, berwajah khas Indonesia-Melayu. Rambut hitam legam, lurus, panjang sebahu, ditata rapi dengan belahan pinggir. Ekspresi wajah tenang, tatapan mata intens langsung ke kamera, dengan sedikit senyum tipis yang elegan. Mengenakan [Deskripsikan Baju Produk].',
+    minImages: 0, // Can be 0 for text-only model gen
+    maxImages: 1
+  },
+  product: {
+    id: 'product',
+    title: 'Foto Produk',
+    description: 'Ubah foto produk biasa menjadi foto studio profesional.',
+    defaultPrompt: 'Tempatkan produk ini di atas podium marmer putih dengan pencahayaan studio premium. Tambahkan elemen dekorasi minimalis seperti daun monstera di latar belakang. Bokeh halus, tajam, dan elegan.',
+    minImages: 1,
+    maxImages: 1
+  },
+  fashion: {
+    id: 'fashion',
+    title: 'Foto Fashion',
+    description: 'Katalog fashion profesional dengan model AI.',
+    defaultPrompt: 'Foto katalog fashion full-body. Model profesional mengenakan pakaian ini. Pose dinamis namun elegan. Latar belakang studio abu-abu polos atau jalanan kota modern (Streetwear).',
+    minImages: 1,
+    maxImages: 1
+  },
+  mockup: {
+    id: 'mockup',
+    title: 'Buat Mockup',
+    description: 'Terapkan desain logo/poster ke objek nyata.',
+    defaultPrompt: 'Terapkan desain ini secara realistis ke permukaan objek pada foto kedua. Sesuaikan perspektif, bayangan, dan tekstur agar terlihat bersih dan alami (Mockup).',
+    minImages: 2,
+    maxImages: 2
+  },
+  banner: {
+    id: 'banner',
+    title: 'Buat Banner',
+    description: 'Desain banner promosi otomatis.',
+    defaultPrompt: 'Buat desain banner web promosi lebar. Gunakan produk ini sebagai elemen utama di sebelah kanan. Tambahkan teks placeholder "BIG SALE" di sebelah kiri. Latar belakang gradasi modern.',
+    minImages: 1,
+    maxImages: 1
+  },
+  carousel: {
+    id: 'carousel',
+    title: 'Buat Carousel',
+    description: 'Konten media sosial berurutan (Carousel).',
+    defaultPrompt: 'Buat desain slide carousel Instagram yang edukatif dan visual. Gunakan palet warna brand yang konsisten.',
+    minImages: 1,
+    maxImages: 3
+  },
+  flayer: {
+    id: 'flayer',
+    title: 'Desain Flyer',
+    description: 'Desain selebaran promosi siap cetak.',
+    defaultPrompt: 'Buat desain Flyer promosi ukuran A4. Tata letak profesional, headline menarik di atas, gambar produk di tengah, dan detail kontak di bawah. Gaya modern dan bersih.',
+    minImages: 1,
+    maxImages: 1
+  },
+
+  // DOWNLOADERS
   youtube: {
     id: 'youtube',
     title: 'Youtube Downloader',
-    description: 'Unduh video Youtube (MP4/MP3).',
+    description: 'Download video Youtube kualitas tinggi.',
     defaultPrompt: '',
     minImages: 0,
     maxImages: 0,
@@ -322,7 +341,7 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   tiktok: {
     id: 'tiktok',
     title: 'Tiktok Downloader',
-    description: 'Unduh video Tiktok tanpa watermark.',
+    description: 'Download video Tiktok tanpa watermark.',
     defaultPrompt: '',
     minImages: 0,
     maxImages: 0,
@@ -331,7 +350,7 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   instagram: {
     id: 'instagram',
     title: 'Instagram Downloader',
-    description: 'Unduh Foto, Video, Reels & Stories.',
+    description: 'Download Foto/Video/Reels Instagram.',
     defaultPrompt: '',
     minImages: 0,
     maxImages: 0,
@@ -340,7 +359,7 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   facebook: {
     id: 'facebook',
     title: 'Facebook Downloader',
-    description: 'Unduh video publik Facebook.',
+    description: 'Download video dari Facebook.',
     defaultPrompt: '',
     minImages: 0,
     maxImages: 0,
@@ -348,8 +367,8 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   },
   twitter: {
     id: 'twitter',
-    title: 'X Downloader',
-    description: 'Unduh video & GIF dari Twitter/X.',
+    title: 'X / Twitter Downloader',
+    description: 'Download video/media dari X (Twitter).',
     defaultPrompt: '',
     minImages: 0,
     maxImages: 0,
@@ -357,283 +376,288 @@ const FEATURES: Record<FeatureMode, FeatureConfig> = {
   }
 };
 
-const Typewriter: React.FC<{ text: string; speed?: number }> = ({ text, speed = 30 }) => {
-  const [displayText, setDisplayText] = useState('');
-  const [index, setIndex] = useState(0);
+// --- TYPEWRITER COMPONENT ---
+const Typewriter = ({ text, delay = 50, infinite = true }: { text: string; delay?: number, infinite?: boolean }) => {
+  const [currentText, setCurrentText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Reset if text changes
-    setDisplayText('');
-    setIndex(0);
-  }, [text]);
+    let timeout: ReturnType<typeof setTimeout>;
 
-  useEffect(() => {
-    if (index < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayText((prev) => prev + text.charAt(index));
-        setIndex((prev) => prev + 1);
-      }, speed);
-      return () => clearTimeout(timeout);
+    if (currentIndex < text.length) {
+      timeout = setTimeout(() => {
+        setCurrentText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, delay);
+    } else if (infinite) {
+      // Wait a bit then reset
+      timeout = setTimeout(() => {
+        setCurrentIndex(0);
+        setCurrentText('');
+      }, 3000); // 3 seconds pause before repeating
     }
-  }, [index, text, speed]);
 
-  return (
-    <span>
-      {displayText}
-      <span className="animate-pulse border-r-2 border-emerald-500 ml-0.5"></span>
-    </span>
-  );
+    return () => clearTimeout(timeout);
+  }, [currentIndex, delay, infinite, text]);
+
+  return <span className="text-white">{currentText}</span>;
 };
 
-const FeatureCard: React.FC<{ feature: FeatureConfig; onClick: () => void; delay: number }> = ({ feature, onClick, delay }) => (
-  <button
-    onClick={onClick}
-    className="group relative p-6 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 hover:border-emerald-500/30 dark:hover:bg-white/10 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 animate-in fade-in slide-in-from-bottom-8 fill-mode-backwards"
-    style={{ animationDelay: `${delay}ms`, animationFillMode: 'backwards' }}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-    
-    <div className="relative z-10">
-      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm group-hover:shadow-md border border-slate-200 dark:border-white/5 group-hover:bg-emerald-500/10 dark:group-hover:bg-emerald-500/20">
-         {feature.type === 'video' ? <Video className="text-emerald-600 dark:text-emerald-400" size={20} /> : feature.type === 'chat' ? <MessageSquare className="text-blue-600 dark:text-blue-400" size={20} /> : <Sparkles className="text-emerald-600 dark:text-emerald-400" size={20} />}
+// --- DASHBOARD COMPONENT ---
+const Dashboard = ({ onNavigate }: { onNavigate: (mode: FeatureMode) => void }) => {
+  const FeatureCard = ({ id, icon, title, desc, gradient, delay }: any) => (
+    <button 
+      onClick={() => onNavigate(id)}
+      className="group relative overflow-hidden bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 text-left hover:border-emerald-500/50 transition-all duration-300 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl hover:shadow-emerald-900/20 animate-in zoom-in fill-mode-backwards"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className={`absolute top-0 right-0 p-20 ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-3xl rounded-full translate-x-10 -translate-y-10`}></div>
+      
+      <div className="w-14 h-14 bg-slate-50 dark:bg-white/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-slate-700 dark:text-white shadow-sm border border-slate-100 dark:border-white/5">
+        {icon}
       </div>
       
-      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{feature.title}</h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">{feature.description}</p>
-    </div>
-
-    <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-4 group-hover:translate-x-0">
-      <ArrowRight className="text-emerald-500 dark:text-emerald-400" size={20} />
-    </div>
-  </button>
-);
-
-const Dashboard: React.FC<{ onNavigate: (mode: FeatureMode) => void }> = ({ onNavigate }) => {
-  return (
-    <div className="max-w-6xl mx-auto pb-20">
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+        {title}
+      </h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        {desc}
+      </p>
       
+      <div className="mt-6 flex items-center text-sm font-bold text-emerald-600 dark:text-emerald-500 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+        Coba Sekarang <ArrowRight size={16} className="ml-2" />
+      </div>
+    </button>
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-12 pb-20">
       {/* Hero Section */}
-      <div className="relative rounded-3xl overflow-hidden bg-[#0F172A] border border-slate-800 shadow-2xl mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-900/30 to-transparent"></div>
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-[#0c0c0e] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-600/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none"></div>
+         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/10 blur-[100px] rounded-full mix-blend-screen pointer-events-none"></div>
          
-         <div className="relative z-10 p-10 md:p-16 flex flex-col md:flex-row items-center gap-10">
-            <div className="flex-1 space-y-6">
+         <div className="relative z-10 flex flex-col md:flex-row items-center p-8 md:p-16 gap-12">
+            <div className="flex-1 space-y-8">
                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-                  <Activity size={12} /> System Online v3.1
+                  <Activity size={14} /> System Online V3.1
                </div>
-               <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight">
+               
+               <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-none">
                   Andri AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Pro</span>
                </h1>
                
-               <div className="text-lg text-slate-400 leading-relaxed max-w-xl min-h-[90px]">
+               <div className="text-lg text-slate-400 leading-relaxed max-w-xl h-24">
                   <Typewriter 
                     text="Enterprise-grade Generative AI Platform untuk advanced photo manipulation, next-level graphic design, dan cinematic video rendering." 
-                    speed={25}
+                    delay={30}
                   />
-                  <br/>
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 delay-1000 fill-mode-backwards">
-                     <span className="text-emerald-500/80 text-sm mt-2 block font-mono">Powered by Google Gemini 2.5 + Veo latest build.</span>
-                     <span className="text-slate-500 text-xs mt-1 block font-mono">Engineered & maintained by Andri Waskitho.</span>
-                  </div>
+               </div>
+               
+               <div className="flex flex-col gap-1">
+                  <p className="text-sm text-emerald-500 font-mono">Powered by Google Gemini 2.5 + Veo latest build.</p>
+                  <p className="text-xs text-slate-500 font-mono">Engineered & maintained by Andri Waskitho.</p>
                </div>
 
-               <div className="flex flex-wrap gap-4 pt-4">
-                  <button onClick={() => onNavigate('merge')} className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/50 transition-all transform hover:-translate-y-1 flex items-center gap-2">
-                     <Layers size={18} /> Mulai Gabung Foto
+               <div className="flex gap-4 pt-4">
+                  <button onClick={() => onNavigate('merge')} className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center gap-2">
+                     <Layers size={20} /> Mulai Gabung Foto
                   </button>
-                  <button onClick={() => onNavigate('imagine')} className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-2">
-                     <Image size={18} /> Buat Gambar (Imagine)
+                  <button onClick={() => onNavigate('imagine')} className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-2xl transition-all hover:scale-105 flex items-center gap-2">
+                     <Image size={20} /> Buat Gambar (Imagine)
                   </button>
                </div>
             </div>
             
-            {/* Holographic Visual (Lottie Animation) - ENLARGED */}
-            <div className="w-full md:w-5/12 relative aspect-square md:aspect-auto h-80 md:h-[400px] flex items-center justify-center">
-               <div className="absolute inset-0 bg-emerald-500/10 blur-[100px] rounded-full animate-pulse"></div>
+            <div className="w-full md:w-5/12 h-96 flex items-center justify-center relative">
+               <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] to-transparent z-20"></div>
                {/* @ts-ignore */}
                <dotlottie-wc 
                   src="https://lottie.host/5a41cfbe-1d43-4e11-a3c3-0ae05bdc2ce9/Cc9HVCmP3t.lottie" 
+                  loop 
                   autoplay 
-                  loop
                   style={{ width: '100%', height: '100%', transform: 'scale(1.2)' }}
                ></dotlottie-wc>
             </div>
          </div>
 
-         {/* Ticker */}
-         <div className="bg-black/40 border-t border-white/5 py-2 px-6 flex items-center overflow-hidden">
-            <div className="flex gap-8 animate-marquee whitespace-nowrap text-xs font-mono text-emerald-500/70">
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> GEMINI 3 PRO ENGINE ACTIVE</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> VEO VIDEO RENDER READY</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> GPU CLUSTER OPTIMIZED</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> LATENCY: 12ms</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> SECURE CONNECTION</span>
+         <div className="border-t border-white/5 bg-black/20 p-3 flex gap-8 overflow-hidden whitespace-nowrap text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
+            <div className="animate-marquee flex gap-8">
+               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> GEMINI 3 PRO ENGINE ACTIVE</span>
+               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> VEO VIDEO RENDER READY</span>
+               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> GPU CLUSTER OPTIMIZED</span>
+               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> LATENCY: 12ms</span>
+               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> SECURE CONNECTION</span>
             </div>
          </div>
       </div>
 
-      {/* Feature Highlights Grid */}
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-         <Zap className="text-yellow-400" /> Fitur Unggulan
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-         {/* Removed Chatbot Card since it's now a global widget */}
-         <FeatureCard feature={FEATURES.imagine} onClick={() => onNavigate('imagine')} delay={100} />
-         <FeatureCard feature={FEATURES.veo} onClick={() => onNavigate('veo')} delay={200} />
-         <FeatureCard feature={FEATURES.faceswap} onClick={() => onNavigate('faceswap')} delay={300} />
-         <FeatureCard feature={FEATURES.banana} onClick={() => onNavigate('banana')} delay={400} />
-      </div>
-
-      {/* NEW: Creative Showcase Gallery */}
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 delay-300">
-         <Palette className="text-purple-500" /> Galeri Inspirasi AI
-      </h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 h-96 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-         <div className="relative group rounded-2xl overflow-hidden h-full md:col-span-2 md:row-span-2 shadow-lg border border-white/10">
-            {/* UPDATED IMAGE URL: 3D Fluid Abstract (Reliable) */}
-            <img 
-               src="https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80" 
-               alt="Showcase 1" 
-               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      <div>
+         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-2">
+            <Zap size={24} className="text-yellow-500" /> Fitur Unggulan
+         </h2>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FeatureCard 
+               id="chatbot"
+               title="AI Chatbot Assistant"
+               desc="Tanya jawab cerdas dengan Gemini 3 Pro."
+               icon={<MessageSquare size={24} />}
+               gradient="bg-blue-500"
+               delay={100}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-               <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">3D Art</span>
-               <h3 className="text-white font-bold text-xl">Holographic Flow</h3>
-            </div>
-         </div>
-         <div className="relative group rounded-2xl overflow-hidden h-48 md:h-full shadow-lg border border-white/10">
-             {/* UPDATED IMAGE URL: Fashion Portrait (Reliable) */}
-             <img 
-               src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=400&q=80" 
-               alt="Showcase 2" 
-               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            <FeatureCard 
+               id="imagine"
+               title="Buat Gambar (Imagine)"
+               desc="Buat gambar AI dari teks tanpa perlu upload foto."
+               icon={<Image size={24} />}
+               gradient="bg-purple-500"
+               delay={200}
             />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-               <span className="text-white font-bold border border-white/30 px-3 py-1 rounded-full backdrop-blur-sm">Fashion AI</span>
-            </div>
-         </div>
-         <div className="relative group rounded-2xl overflow-hidden h-48 md:h-full shadow-lg border border-white/10">
-             {/* UPDATED IMAGE URL: Vaporwave Gradient (Reliable) */}
-             <img 
-               src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=400&q=80" 
-               alt="Showcase 3" 
-               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            <FeatureCard 
+               id="veo"
+               title="Google Veo 3"
+               desc="Generasi video sinematik tercanggih."
+               icon={<Video size={24} />}
+               gradient="bg-red-500"
+               delay={300}
             />
-             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-               <span className="text-white font-bold border border-white/30 px-3 py-1 rounded-full backdrop-blur-sm">Gradient</span>
-            </div>
-         </div>
-          <div className="relative group rounded-2xl overflow-hidden h-48 md:h-full md:col-span-2 shadow-lg border border-white/10">
-             {/* UPDATED IMAGE URL: Tech Abstract (Reliable) */}
-             <img 
-               src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80" 
-               alt="Showcase 4" 
-               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            <FeatureCard 
+               id="faceswap"
+               title="Face Swap Pro"
+               desc="Tukar wajah antar foto dengan presisi tinggi."
+               icon={<Users size={24} />}
+               gradient="bg-emerald-500"
+               delay={400}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-               <span className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">Tech Visuals</span>
-               <h3 className="text-white font-bold text-lg">Digital Data</h3>
-            </div>
          </div>
       </div>
 
-      {/* Categories Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="space-y-8">
+         <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+               <Palette size={24} className="text-purple-500" /> Galeri Inspirasi AI
+            </h2>
+         </div>
+         
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[500px]">
+            <div className="md:col-span-1 h-full relative group overflow-hidden rounded-3xl cursor-pointer">
+               <img 
+                  src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" 
+                  alt="Showcase 1" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-8 flex flex-col justify-end">
+                  <h3 className="text-white font-bold text-2xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Abstract 3D Art</h3>
+                  <p className="text-slate-300 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">Generasi seni abstrak dengan detail tinggi.</p>
+               </div>
+            </div>
+
+            <div className="md:col-span-2 grid grid-rows-2 gap-6 h-full">
+               <div className="grid grid-cols-2 gap-6 h-full">
+                   <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
+                      <img 
+                         src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80" 
+                         alt="Fashion" 
+                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-bold tracking-widest border border-white px-4 py-2 rounded-full uppercase text-xs">Neon Fashion</span>
+                       </div>
+                   </div>
+                   <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
+                      <img 
+                         src="https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=600&q=80" 
+                         alt="Holo" 
+                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-bold tracking-widest border border-white px-4 py-2 rounded-full uppercase text-xs">Holographic Flow</span>
+                       </div>
+                   </div>
+               </div>
+               <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
+                   <img 
+                      src="https://images.unsplash.com/photo-1620641788421-7f1c338e61a9?auto=format&fit=crop&w=1200&q=80" 
+                      alt="Tech" 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                   />
+                   <div className="absolute inset-0 bg-gradient-to-l from-black/80 to-transparent p-8 flex flex-col justify-center items-end text-right">
+                       <h3 className="text-white font-bold text-2xl">Future Tech</h3>
+                       <p className="text-slate-300 text-sm mt-1">Visualisasi data dan teknologi masa depan.</p>
+                   </div>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-slate-200 dark:border-white/5">
          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-               <Camera size={18} /> Studio Suite
-            </h3>
-            <div className="space-y-2">
-               <button onClick={() => onNavigate('prewedding')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Heart size={16} /> Foto Prewedding
-               </button>
-               <button onClick={() => onNavigate('wedding')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Heart size={16} /> Foto Wedding
-               </button>
-               <button onClick={() => onNavigate('umrah')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Globe size={16} /> Umrah / Haji
-               </button>
-            </div>
+            <h3 className="text-emerald-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Camera size={14}/> Studio Suite</h3>
+            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+               <li onClick={() => onNavigate('prewedding')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Foto Prewedding</li>
+               <li onClick={() => onNavigate('wedding')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Foto Wedding</li>
+               <li onClick={() => onNavigate('babyborn')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Baby Born</li>
+            </ul>
          </div>
-
          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-blue-500 uppercase tracking-wider flex items-center gap-2">
-               <Briefcase size={18} /> Business Tools
-            </h3>
-            <div className="space-y-2">
-               <button onClick={() => onNavigate('product')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Briefcase size={16} /> Foto Produk
-               </button>
-               <button onClick={() => onNavigate('flayer')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Layers size={16} /> Desain Flyer
-               </button>
-               <button onClick={() => onNavigate('banner')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Layers size={16} /> Buat Banner
-               </button>
-            </div>
+            <h3 className="text-blue-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Briefcase size={14}/> Business Tools</h3>
+             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+               <li onClick={() => onNavigate('product')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Foto Produk</li>
+               <li onClick={() => onNavigate('fashion')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Foto Fashion</li>
+               <li onClick={() => onNavigate('banner')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Buat Banner</li>
+            </ul>
          </div>
-
          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-purple-500 uppercase tracking-wider flex items-center gap-2">
-               <Music size={18} /> Media Download
-            </h3>
-            <div className="space-y-2">
-               <button onClick={() => onNavigate('youtube')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Youtube size={16} /> Youtube
-               </button>
-               <button onClick={() => onNavigate('tiktok')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Music size={16} /> Tiktok
-               </button>
-               <button onClick={() => onNavigate('instagram')} className="w-full text-left p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white transition-colors flex items-center gap-3">
-                  <Instagram size={16} /> Instagram
-               </button>
-            </div>
+            <h3 className="text-purple-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Music size={14}/> Media Download</h3>
+             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+               <li onClick={() => onNavigate('youtube')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Youtube size={12}/> Youtube</li>
+               <li onClick={() => onNavigate('tiktok')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Video size={12}/> Tiktok</li>
+               <li onClick={() => onNavigate('instagram')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Instagram size={12}/> Instagram</li>
+            </ul>
          </div>
       </div>
-
     </div>
   );
 };
 
-const App: React.FC = () => {
+
+// --- MAIN APP COMPONENT ---
+const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentMode, setCurrentMode] = useState<FeatureMode>('home');
-  // Theme State: 'dark' by default
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'dark';
-    }
-    return 'dark';
-  });
+  const [theme, setTheme] = useState('light');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const getThemeStyle = () => {
+     switch(theme) {
+        case 'light': return 'bg-white text-slate-900';
+        case 'dark': return 'bg-[#09090b] text-white';
+        case 'purple': return 'bg-gradient-to-br from-[#1a0b2e] via-[#130722] to-[#0f0518] text-white';
+        case 'ocean': return 'bg-gradient-to-br from-[#0f172a] via-[#0c2e42] to-[#082f49] text-white';
+        case 'emerald': return 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#065f46] text-white';
+        case 'sunset': return 'bg-gradient-to-br from-[#451a03] via-[#7c2d12] to-[#9a3412] text-white';
+        case 'midnight': return 'bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] text-white';
+        case 'cyberpunk': return 'bg-gradient-to-br from-[#2e0225] via-[#4a044e] to-[#701a75] text-white';
+        default: return 'bg-[#09090b] text-white';
+     }
+  };
 
   useEffect(() => {
-    // Check session
-    const session = localStorage.getItem('andri_ai_session');
-    if (session === 'active') {
-      setIsLoggedIn(true);
+    if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
     }
-  }, []);
-
-  // Theme Effect
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const handleLogin = (status: boolean) => {
     setIsLoggedIn(status);
-    if (status) {
-      localStorage.setItem('andri_ai_session', 'active');
-    }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('andri_ai_session');
-    setCurrentMode('home');
+  const handleNavigate = (mode: FeatureMode) => {
+    setCurrentMode(mode);
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (!isLoggedIn) {
@@ -641,61 +665,56 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen font-[Inter] transition-colors duration-300 ${theme === 'dark' ? 'bg-[#09090b] text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
+    <div className={`min-h-screen transition-colors duration-500 font-['Inter'] ${getThemeStyle()}`}>
+      
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#09090b] z-40 flex items-center justify-between px-4 border-b border-white/10 shadow-lg">
+          <div className="flex items-center gap-2">
+             <Sparkles className="text-emerald-500 w-6 h-6" />
+             <span className="text-white font-bold text-lg">Andri AI Pro</span>
+          </div>
+          <button onClick={() => setIsMobileMenuOpen(true)} className="text-white p-2">
+             <Menu size={24} />
+          </button>
+      </div>
+
       <Sidebar 
         currentMode={currentMode} 
-        onNavigate={setCurrentMode} 
-        onLogout={handleLogout} 
+        onNavigate={handleNavigate} 
+        onLogout={() => setIsLoggedIn(false)}
+        className="z-50"
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
-      
-      <main className="flex-1 ml-72 p-8 overflow-y-auto h-screen relative transition-all">
-        {/* Top Bar / Breadcrumb */}
-        <div className="flex items-center justify-between mb-8">
-           <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="hover:text-emerald-500 cursor-pointer" onClick={() => setCurrentMode('home')}>Application</span>
-              <span>/</span>
-              <span className="text-emerald-500 font-bold uppercase">{FEATURES[currentMode].title}</span>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              <div className="px-3 py-1 bg-emerald-900/30 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-mono flex items-center gap-2">
-                 <span className="relative flex h-2 w-2">
-                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                 </span>
-                 System Stable
-              </div>
-           </div>
+
+      <main className={`transition-all duration-300 pt-20 md:pt-8 px-4 md:px-8 pb-8 md:ml-72 min-h-screen flex flex-col`}>
+        <div className="flex-1">
+            {currentMode === 'home' && <Dashboard onNavigate={handleNavigate} />}
+            
+            {currentMode === 'profile' && <UserProfile />}
+            
+            {currentMode === 'settings' && (
+               <AdminSettings theme={theme} setTheme={setTheme} />
+            )}
+            
+            {currentMode !== 'home' && currentMode !== 'profile' && currentMode !== 'settings' && currentMode !== 'chatbot' && (
+            <ImageMerger feature={FEATURES[currentMode]} />
+            )}
         </div>
 
-        {/* Content Router */}
-        {currentMode === 'home' ? (
-          <Dashboard onNavigate={setCurrentMode} />
-        ) : currentMode === 'settings' ? (
-          <AdminSettings theme={theme} setTheme={setTheme} />
-        ) : currentMode === 'profile' ? (
-          <UserProfile />
-        ) : (
-          <ImageMerger feature={FEATURES[currentMode]} />
-        )}
-
-        {/* Global Floating Chatbot Widget */}
         <ChatBot />
 
-        {/* Footer Copyrights */}
-        <footer className="mt-20 pt-8 border-t border-slate-200 dark:border-white/5 text-center transition-colors">
-           <div className="flex flex-col items-center gap-2">
-              <h4 className="text-slate-700 dark:text-white font-bold tracking-tight">Andri AI Pro <span className="text-emerald-500">v3.1</span></h4>
-              <p className="text-slate-500 text-sm max-w-md mx-auto">
-                 Platform Enterprise AI untuk manipulasi visual tingkat lanjut. Dilarang keras menyalin atau mendistribusikan ulang kode sumber tanpa izin.
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-xs font-mono text-slate-600 bg-black/5 dark:bg-white/5 px-4 py-2 rounded-full border border-black/5 dark:border-white/5">
-                 <ShieldCheck size={12} className="text-emerald-500" />
-                 <span>Copyright © {new Date().getFullYear()} by Andri Waskitho. All rights reserved.</span>
-              </div>
+        <footer className="mt-20 border-t border-slate-200 dark:border-white/5 pt-8 text-center pb-8">
+           <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-white font-bold text-lg">
+              <Sparkles className="text-emerald-500" size={18} /> Andri AI Pro
            </div>
+           <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+              Enterprise-grade Generative AI Platform.
+           </p>
+           <p className="text-xs text-slate-400 dark:text-slate-600 font-mono">
+              © {new Date().getFullYear()} Andri Waskitho. All rights reserved.
+           </p>
         </footer>
-
       </main>
     </div>
   );
