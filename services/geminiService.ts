@@ -262,7 +262,7 @@ export const generateImage = async (
   images: UploadedImage[],
   ratio: AspectRatio,
   mode: FeatureMode,
-  options?: { negativePrompt?: string; seed?: number }
+  options?: { negativePrompt?: string; seed?: number; bananaMode?: 'fast' | 'pro' }
 ): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imageParts = await Promise.all(images.map((img) => fileToGenerativePart(img.file)));
@@ -270,8 +270,13 @@ export const generateImage = async (
     let systemInstruction = "You are a professional AI image generator. Create high-quality results.";
     if (mode === 'faceswap') systemInstruction = "Task: Face Swap. Replace face in image 2 with face from image 1 perfectly.";
     
+    let modelName = PRIMARY_IMAGE_MODEL;
+    if (mode === 'banana' && options?.bananaMode === 'pro') {
+        modelName = 'gemini-3.1-flash-image-preview';
+    }
+
     const response = await ai.models.generateContent({
-      model: PRIMARY_IMAGE_MODEL,
+      model: modelName,
       contents: [{
         parts: [
             ...imageParts,

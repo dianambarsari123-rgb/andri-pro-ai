@@ -362,7 +362,17 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setThem
                 </button>
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex justify-end gap-3">
+                <button 
+                  onClick={() => {
+                      alert("Deploying to Firebase... (Simulated in UI)");
+                      setTimeout(() => alert("Deploy successful!"), 1500);
+                  }}
+                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all text-sm"
+                >
+                  <Cloud size={16} />
+                  Deploy to Firebase
+                </button>
                 <button 
                   onClick={handleSaveFirebaseConfig}
                   disabled={fbLoading}

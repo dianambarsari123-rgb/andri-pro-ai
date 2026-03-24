@@ -18,7 +18,8 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
   const [loading, setLoading] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [numResults, setNumResults] = useState(4);
+  const [numResults, setNumResults] = useState(2);
+  const [bananaMode, setBananaMode] = useState<'fast' | 'pro'>('fast');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,8 +35,9 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
   };
 
   const handleGenerate = async () => {
-    if (images.length < (feature.minImages || 1)) {
-        setError(`Minimal ${feature.minImages || 1} gambar dibutuhkan.`);
+    const minRequired = feature.minImages ?? 1;
+    if (images.length < minRequired) {
+        setError(`Minimal ${minRequired} gambar dibutuhkan.`);
         return;
     }
     if (!prompt.trim()) {
@@ -50,7 +52,7 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
       for (let i = 0; i < numResults; i++) {
         // Add a small delay between requests to avoid rate limits if generating multiple
         if (i > 0) await new Promise(resolve => setTimeout(resolve, 1000));
-        const img = await generateImage(prompt, images, ratio, feature.id, {});
+        const img = await generateImage(prompt, images, ratio, feature.id, { bananaMode });
         results.push(img);
       }
       
@@ -164,25 +166,50 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
                     </div>
                 </div>
 
+                {/* Banana AI Mode Toggle */}
+                {feature.id === 'banana' && (
+                    <div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-6 h-6 rounded-full bg-[#1e2128] text-white flex items-center justify-center text-xs font-bold">★</div>
+                            <h3 className="font-bold text-slate-800">Mode Generasi</h3>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            <button 
+                                onClick={() => setBananaMode('fast')}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${bananaMode === 'fast' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                ⚡ Fast (Unlimited)
+                            </button>
+                            <button 
+                                onClick={() => setBananaMode('pro')}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${bananaMode === 'pro' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                👑 Pro (High Detail)
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Step 3: Jumlah Hasil */}
                 <div>
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-6 h-6 rounded-full bg-[#1e2128] text-white flex items-center justify-center text-xs font-bold">3</div>
                         <h3 className="font-bold text-slate-800">Jumlah Hasil</h3>
                     </div>
-                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <input 
-                            type="range" 
-                            min="1" 
-                            max="4" 
-                            value={numResults}
-                            onChange={(e) => setNumResults(parseInt(e.target.value))}
-                            className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                        />
-                        <div className="text-center min-w-[3rem]">
-                            <div className="font-bold text-slate-800">{numResults}</div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase">Gambar</div>
-                        </div>
+                    <div className="flex gap-2">
+                        {[1, 2, 3, 4].map((num) => (
+                            <button
+                                key={num}
+                                onClick={() => setNumResults(num)}
+                                className={`flex-1 py-3 rounded-xl font-bold transition-all border ${
+                                    numResults === num
+                                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-md'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                }`}
+                            >
+                                {num}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -213,9 +240,9 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
                 {/* Generate Button */}
                 <button 
                     onClick={handleGenerate}
-                    disabled={loading || images.length < 2 || !prompt.trim()}
+                    disabled={loading || images.length < (feature.minImages ?? 1) || !prompt.trim()}
                     className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
-                        loading || images.length < 2 || !prompt.trim()
+                        loading || images.length < (feature.minImages ?? 1) || !prompt.trim()
                             ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                             : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200 shadow-sm'
                     }`}
@@ -243,7 +270,7 @@ export const ImageMerger: React.FC<ImageMergerProps> = ({ feature, onNavigate })
                     </div>
                 ) : generatedResults.length > 0 ? (
                     <div className="w-full h-full flex flex-col gap-4">
-                        <div className={`grid gap-4 ${generatedResults.length === 1 ? 'grid-cols-1' : generatedResults.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                        <div className={`grid gap-4 w-full ${generatedResults.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-1 sm:grid-cols-2'}`}>
                             {generatedResults.map((res, idx) => (
                                 <div key={idx} className="relative w-full aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm group">
                                     <img src={res} className="w-full h-full object-contain bg-slate-50" />
