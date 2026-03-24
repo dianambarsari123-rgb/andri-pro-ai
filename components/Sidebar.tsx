@@ -208,28 +208,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
         ></div>
       )}
 
-      {/* Sidebar Container - Always Dark */}
-      <div className={`dark w-72 bg-slate-800 text-slate-300 border-r border-slate-700 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-transform duration-300 ease-in-out shadow-2xl ${
+      {/* Sidebar Container */}
+      <aside className={`w-72 bg-white/80 dark:bg-[#0c0c0e]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-white/10 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-transform duration-300 ease-in-out shadow-xl ${
          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } ${className}`}>
         
         {/* Mobile Close Button */}
-        <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-slate-500 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10 p-2 rounded-full transition-colors">
+        <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10 p-2 rounded-full transition-colors">
            <X size={20} />
         </button>
 
         {/* Premium Brand Header */}
-        <div className="p-8 pb-6 shrink-0 relative overflow-hidden group cursor-pointer" onClick={() => onNavigate('home')}>
-          <div className="flex items-center gap-3 relative z-10">
-            <div className={`w-10 h-10 bg-gradient-to-tr ${logoColor} rounded-xl flex items-center justify-center shadow-lg ${logoShadow} ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300`}>
-              {isLuxury ? <Crown className="text-white w-5 h-5 animate-pulse" /> : <Sparkles className="text-white w-5 h-5 animate-pulse" />}
-            </div>
-            <div>
-              <h1 className="text-slate-800 dark:text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">INDIGITAL <span className={isLuxury ? "text-amber-400" : "text-emerald-500 dark:text-emerald-400"}>STUDIO</span></h1>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isLuxury ? 'bg-amber-400' : 'bg-emerald-500'} animate-pulse box-shadow-glow`}></span>
-                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
-              </div>
+        <div className="p-6 shrink-0 relative overflow-hidden group cursor-pointer flex items-center gap-3" onClick={() => onNavigate('home')}>
+          <div className={`w-10 h-10 bg-gradient-to-tr ${logoColor} rounded-2xl flex items-center justify-center shadow-lg ${logoShadow} text-white group-hover:scale-105 transition-transform duration-300`}>
+            {isLuxury ? <Crown size={20} className="animate-pulse" /> : <Sparkles size={20} className="animate-pulse" />}
+          </div>
+          <div>
+            <h1 className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-none mb-1">INDIGITAL</h1>
+            <div className="flex items-center gap-1.5">
+              <span className={`text-[10px] font-bold tracking-widest uppercase ${isLuxury ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>STUDIO</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[80px]">{userInfo.role}</span>
             </div>
           </div>
         </div>
@@ -281,17 +280,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
               <div key={group.id} className="space-y-1">
                 <button
                   onClick={() => toggleGroup(group.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-200 group ${
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-2xl transition-all duration-200 group ${
                     expandedGroups[group.id] 
-                      ? 'text-slate-800 bg-slate-100 dark:text-white dark:bg-white/5' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-white/5'
+                      ? 'text-slate-800 dark:text-white' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-lg transition-colors ${
+                    <div className={`p-1.5 rounded-xl transition-colors ${
                       expandedGroups[group.id] 
-                        ? (isLuxury ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400')
-                        : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-400'
+                        ? (isLuxury ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400')
+                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 dark:bg-white/5 dark:text-slate-400 dark:group-hover:bg-white/10'
                       }`}>
                       {group.icon}
                     </div>
@@ -306,7 +305,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
                   expandedGroups[group.id] ? 'max-h-[800px] opacity-100 pt-2' : 'max-h-0 opacity-0'
                 }`}>
                   {/* Visual Line for tree structure */}
-                  <div className="absolute left-[1.35rem] top-0 bottom-4 w-px bg-slate-200 dark:bg-gradient-to-b dark:from-white/10 dark:to-transparent"></div>
+                  <div className="absolute left-[1.35rem] top-0 bottom-4 w-px bg-slate-200 dark:bg-white/10"></div>
                   
                   {group.items.map((item) => (
                     <NavItem 
@@ -325,59 +324,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
           </div>
 
         </nav>
-
-        {/* Footer / Settings */}
-        <div className="p-4 bg-slate-50/80 dark:bg-black/20 border-t border-slate-200 dark:border-white/5 space-y-1 mt-auto relative z-20 backdrop-blur-xl">
-           
-           {/* Profile Link in Footer */}
-           <button 
-            onClick={() => onNavigate('profile')}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
-              currentMode === 'profile' 
-                ? (isLuxury ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20')
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5'
-            }`}
-          >
-            <UserCircle size={18} className={`transition-colors ${isLuxury ? 'group-hover:text-amber-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'}`} />
-            <span>Profil Saya</span>
-          </button>
-
-          {/* Theme Toggle Button */}
-          {onToggleTheme && (
-              <button 
-                onClick={onToggleTheme}
-                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
-              >
-                {currentTheme === 'light' || currentTheme === 'luxury' ? (
-                   <Moon size={18} className="group-hover:text-purple-400 transition-colors" />
-                ) : (
-                   <Sun size={18} className="group-hover:text-amber-400 transition-colors" />
-                )}
-                <span>{currentTheme === 'light' || currentTheme === 'luxury' ? 'Mode Gelap' : 'Mode Terang'}</span>
-              </button>
-          )}
-
-          <button 
-            onClick={() => onNavigate('settings')}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
-              currentMode === 'settings' 
-                ? (isLuxury ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20')
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5'
-            }`}
-          >
-            <Settings size={18} className={`transition-transform duration-500 ${currentMode === 'settings' ? 'rotate-90' : 'group-hover:rotate-90'}`} />
-            <span>Pengaturan Admin</span>
-          </button>
-
-          <button 
-            onClick={onLogout}
-            className="flex items-center gap-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-100 dark:hover:border-red-500/20"
-          >
-            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium text-sm">Keluar System</span>
-          </button>
-        </div>
-      </div>
+      </aside>
     </>
   );
 };
@@ -393,15 +340,13 @@ interface NavItemProps {
 }
 
 const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onClick, highlightColor, isLuxury }) => {
-  // Styles based on theme - Fixed Contrast for Light Mode
-  // If luxury & active: bg is slight amber tint, text is DARK AMBER in light mode, bright amber in dark mode.
   const activeBg = isLuxury 
-     ? 'bg-gradient-to-r from-amber-500/10 to-transparent text-amber-700 dark:bg-slate-900/50 dark:text-amber-400 border-l-2 border-amber-500'
-     : 'bg-gradient-to-r from-emerald-50 to-transparent dark:bg-slate-900/80 dark:text-white border-l-2 border-emerald-500';
+     ? 'bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-500/10 dark:to-transparent text-amber-700 dark:text-amber-400 border-l-2 border-amber-500'
+     : 'bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-500/10 dark:to-transparent text-emerald-700 dark:text-emerald-400 border-l-2 border-emerald-500';
   
   const activeIconColor = isLuxury
-     ? 'text-amber-600 dark:text-amber-400 dark:drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-     : 'text-emerald-700 dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]';
+     ? 'text-amber-600 dark:text-amber-400'
+     : 'text-emerald-600 dark:text-emerald-400';
 
   return (
     <button
@@ -412,17 +357,19 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onCli
           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 border-l-2 border-transparent'
       } ${isSubItem ? 'ml-3 w-[calc(100%-0.75rem)]' : ''}`}
     >
-      
-      {/* Icon with Glow Effect on Active */}
-      <span className={`relative mr-3 shrink-0 transition-colors duration-300 ${
+      <span className={`mr-3 shrink-0 transition-colors duration-300 ${
         active 
           ? highlightColor || activeIconColor 
-          : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'
+          : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
       }`}>
         {icon}
       </span>
 
-      <span className="flex-1 text-left truncate relative z-10 tracking-tight">{label}</span>
+      <span className="flex-1 text-left truncate relative z-10">{label}</span>
+
+      {active && (
+        <span className={`absolute right-3 w-1.5 h-1.5 rounded-full ${isLuxury ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+      )}
 
       {/* Hover Light Effect */}
       { !active && (

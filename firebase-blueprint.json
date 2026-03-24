@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Global application configuration settings.",
+      "type": "object",
+      "properties": {
+        "appName": {
+          "type": "string",
+          "description": "The name of the application."
+        },
+        "maintenanceMode": {
+          "type": "boolean",
+          "description": "Whether the app is currently in maintenance mode."
+        },
+        "welcomeMessage": {
+          "type": "string",
+          "description": "A welcome message displayed to users."
+        },
+        "maxGenerationsPerUser": {
+          "type": "number",
+          "description": "Maximum number of generations allowed per user."
+        },
+        "defaultImageModel": {
+          "type": "string",
+          "description": "Default AI model used for image generation."
+        },
+        "enableVideoGeneration": {
+          "type": "boolean",
+          "description": "Toggle to enable or disable video generation feature."
+        },
+        "announcementBanner": {
+          "type": "string",
+          "description": "Text for global announcement banner."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last update."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the admin who last updated the config."
+        }
+      },
+      "required": ["appName", "maintenanceMode", "maxGenerationsPerUser", "defaultImageModel", "enableVideoGeneration"]
+    }
+  },
+  "firestore": {
+    "/settings/{documentId}": {
+      "schema": {
+        "$ref": "#/entities/AppConfig"
+      },
+      "description": "Stores global application settings. Typically a single document named 'config'."
+    }
+  }
+}

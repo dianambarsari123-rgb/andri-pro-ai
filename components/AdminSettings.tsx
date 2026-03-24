@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette, ExternalLink, Crown, Database, Download, Upload, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette, ExternalLink, Crown, Database, Download, Upload, Trash2, AlertTriangle, RefreshCw, Cloud, LogIn } from 'lucide-react';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+import { db, auth } from '../firebase';
 
 interface AdminSettingsProps {
     theme?: string;
@@ -14,6 +17,21 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setThem
   const [saved, setSaved] = useState(false);
   const [dataSize, setDataSize] = useState('0 KB');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Firebase Config State
+  const [fbConfig, setFbConfig] = useState({
+    appName: 'Indigital Studio',
+    maintenanceMode: false,
+    welcomeMessage: 'Selamat datang di Indigital Studio',
+    maxGenerationsPerUser: 10,
+    defaultImageModel: 'gemini-2.5-flash-image',
+    enableVideoGeneration: true,
+    announcementBanner: ''
+  });
+  const [fbSaved, setFbSaved] = useState(false);
+  const [fbLoading, setFbLoading] = useState(true);
+  const [fbError, setFbError] = useState('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     // 1. Cek LocalStorage dulu (User input)
@@ -31,7 +49,75 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setThem
         }
     }
     calculateStorageSize();
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        fetchFirebaseConfig();
+      } else {
+        setFbLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const handleFirebaseLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setFbError("Gagal login: " + error.message);
+    }
+  };
+
+  const fetchFirebaseConfig = async () => {
+    try {
+      setFbLoading(true);
+      const docRef = doc(db, 'settings', 'config');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setFbConfig({
+          appName: data.appName || 'Indigital Studio',
+          maintenanceMode: data.maintenanceMode || false,
+          welcomeMessage: data.welcomeMessage || '',
+          maxGenerationsPerUser: data.maxGenerationsPerUser || 10,
+          defaultImageModel: data.defaultImageModel || 'gemini-2.5-flash-image',
+          enableVideoGeneration: data.enableVideoGeneration !== undefined ? data.enableVideoGeneration : true,
+          announcementBanner: data.announcementBanner || ''
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching config:", error);
+      setFbError(error.message || 'Gagal mengambil konfigurasi dari Firebase.');
+    } finally {
+      setFbLoading(false);
+    }
+  };
+
+  const handleSaveFirebaseConfig = async () => {
+    try {
+      if (!auth.currentUser) {
+        setFbError('Anda harus login sebagai admin untuk menyimpan konfigurasi.');
+        return;
+      }
+      setFbError('');
+      const docRef = doc(db, 'settings', 'config');
+      await setDoc(docRef, {
+        ...fbConfig,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.uid
+      }, { merge: true });
+      
+      setFbSaved(true);
+      setTimeout(() => setFbSaved(false), 3000);
+    } catch (error: any) {
+      console.error("Error saving config:", error);
+      setFbError(error.message || 'Gagal menyimpan konfigurasi ke Firebase.');
+    }
+  };
 
   const calculateStorageSize = () => {
       let total = 0;
@@ -143,6 +229,153 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setThem
                 </div>
               </div>
           )}
+
+          {/* Firebase Cloud Configuration */}
+          <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Cloud size={18} className="text-blue-500" /> Konfigurasi Sistem (Firebase)
+              </h3>
+              <div className="flex items-center gap-3">
+                {currentUser && (
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-full">
+                    {currentUser.email}
+                  </span>
+                )}
+                {fbLoading && <RefreshCw size={16} className="text-slate-400 animate-spin" />}
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {!currentUser ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 rounded-full flex items-center justify-center mb-2">
+                    <Shield size={32} className="text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-800 dark:text-white">Otentikasi Diperlukan</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+                      Anda harus login sebagai Superadmin untuk mengakses dan mengubah konfigurasi sistem di Firebase.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={handleFirebaseLogin}
+                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+                  >
+                    <LogIn size={18} />
+                    Login dengan Google
+                  </button>
+                  {fbError && <p className="text-red-500 text-sm mt-2">{fbError}</p>}
+                </div>
+              ) : (
+                <>
+                  {fbError && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-start gap-2">
+                      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                      <p>{fbError}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nama Aplikasi</label>
+                  <input 
+                    type="text" 
+                    value={fbConfig.appName}
+                    onChange={(e) => setFbConfig({...fbConfig, appName: e.target.value})}
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-200 text-sm bg-white dark:bg-black/20"
+                    disabled={fbLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Max Generasi / User</label>
+                  <input 
+                    type="number" 
+                    value={fbConfig.maxGenerationsPerUser}
+                    onChange={(e) => setFbConfig({...fbConfig, maxGenerationsPerUser: parseInt(e.target.value) || 0})}
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-200 text-sm bg-white dark:bg-black/20"
+                    disabled={fbLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Pesan Selamat Datang</label>
+                <textarea 
+                  value={fbConfig.welcomeMessage}
+                  onChange={(e) => setFbConfig({...fbConfig, welcomeMessage: e.target.value})}
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-200 text-sm bg-white dark:bg-black/20 resize-none h-20"
+                  disabled={fbLoading}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Model Gambar Default</label>
+                  <select 
+                    value={fbConfig.defaultImageModel}
+                    onChange={(e) => setFbConfig({...fbConfig, defaultImageModel: e.target.value})}
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-200 text-sm bg-white dark:bg-black/20"
+                    disabled={fbLoading}
+                  >
+                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
+                    <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image Preview</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Banner Pengumuman (Opsional)</label>
+                  <input 
+                    type="text" 
+                    value={fbConfig.announcementBanner}
+                    onChange={(e) => setFbConfig({...fbConfig, announcementBanner: e.target.value})}
+                    placeholder="Teks banner di atas aplikasi..."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-200 text-sm bg-white dark:bg-black/20"
+                    disabled={fbLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">Fitur Video Generation</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Aktifkan atau nonaktifkan fitur pembuatan video</p>
+                </div>
+                <button 
+                  onClick={() => setFbConfig({...fbConfig, enableVideoGeneration: !fbConfig.enableVideoGeneration})}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${fbConfig.enableVideoGeneration ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  disabled={fbLoading}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${fbConfig.enableVideoGeneration ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">Maintenance Mode</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Tutup akses aplikasi untuk perbaikan</p>
+                </div>
+                <button 
+                  onClick={() => setFbConfig({...fbConfig, maintenanceMode: !fbConfig.maintenanceMode})}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${fbConfig.maintenanceMode ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  disabled={fbLoading}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${fbConfig.maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button 
+                  onClick={handleSaveFirebaseConfig}
+                  disabled={fbLoading}
+                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white font-bold py-2 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-all text-sm"
+                >
+                  {fbSaved ? <CheckCircle size={16} /> : <Save size={16} />}
+                  {fbSaved ? 'Tersimpan!' : 'Simpan ke Cloud'}
+                </button>
+              </div>
+            </>
+            )}
+            </div>
+          </div>
 
           {/* Data Management (NEW FEATURE) */}
           <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">

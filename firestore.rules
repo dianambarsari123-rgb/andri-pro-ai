@@ -1,0 +1,123 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: settings
+    // Document ID: config
+    // Fields:
+    //   - appName: string (required, max 50 chars)
+    //   - maintenanceMode: boolean (required)
+    //   - welcomeMessage: string (optional, max 200 chars)
+    //   - maxGenerationsPerUser: number (required, positive)
+    //   - defaultImageModel: string (required, max 100 chars)
+    //   - enableVideoGeneration: boolean (required)
+    //   - announcementBanner: string (optional, max 300 chars)
+    //   - updatedAt: timestamp (required)
+    //   - updatedBy: string (required, must match uid)
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - role: string ('admin' or 'user')
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (request.auth.token.email == "dianambarsari123@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function isPositiveNumber(field) {
+      return request.resource.data[field] is number && request.resource.data[field] >= 0;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidAppConfig() {
+      return hasOnlyAllowedFields(['appName', 'maintenanceMode', 'welcomeMessage', 'maxGenerationsPerUser', 'defaultImageModel', 'enableVideoGeneration', 'announcementBanner', 'updatedAt', 'updatedBy']) &&
+             hasRequiredFields(['appName', 'maintenanceMode', 'maxGenerationsPerUser', 'defaultImageModel', 'enableVideoGeneration', 'updatedAt', 'updatedBy']) &&
+             isValidStringLength('appName', 1, 50) &&
+             request.resource.data.maintenanceMode is bool &&
+             isValidOptionalString('welcomeMessage', 0, 200) &&
+             isPositiveNumber('maxGenerationsPerUser') &&
+             isValidStringLength('defaultImageModel', 1, 100) &&
+             request.resource.data.enableVideoGeneration is bool &&
+             isValidOptionalString('announcementBanner', 0, 300) &&
+             request.resource.data.updatedAt is timestamp &&
+             request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /settings/{documentId} {
+      // Anyone can read the config to know appName, maintenanceMode, etc.
+      // But only admins can create or update it.
+      allow read: if true;
+      allow create: if isAdmin() && isValidAppConfig();
+      allow update: if isAdmin() && isValidAppConfig();
+      allow delete: if false; // Don't allow deletion of config
+    }
+
+    match /users/{userId} {
+      // Users can read their own profile, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile but cannot set themselves as admin unless they are already an admin
+      allow create: if isAuthenticated() && isOwner(userId) && (
+        (request.resource.data.role == 'user') || isAdmin()
+      );
+      
+      // Users can update their own profile but cannot change their role
+      allow update: if isAuthenticated() && isOwner(userId) && (
+        (request.resource.data.role == resource.data.role) || isAdmin()
+      );
+      
+      allow delete: if isAdmin();
+    }
+  }
+}

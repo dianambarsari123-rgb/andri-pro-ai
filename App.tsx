@@ -18,7 +18,8 @@ import {
   Home as HomeIcon, LayoutTemplate, PenTool, UserCheck, 
   ShoppingBag, Shirt, Type, Columns, FileText, Youtube, 
   Instagram, Facebook, Twitter, Download, Zap, Image as ImageIcon,
-  Maximize2, Eraser, Film, AudioLines, Clock, ArrowRight, Activity, Calendar
+  Maximize2, Eraser, Film, AudioLines, Clock, ArrowRight, Activity, Calendar,
+  Play, Pause, SkipForward, Volume2, Bot, Eye, LogOut, Settings, UserCircle, Sun, Menu
 } from 'lucide-react';
 
 const FEATURES: Record<string, FeatureConfig> = {
@@ -192,142 +193,230 @@ const App: React.FC = () => {
         onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
       />
       
-      <main className="flex-1 ml-0 md:ml-72 p-6 overflow-x-hidden transition-colors duration-300">
-        {currentMode === 'home' ? (
-           <div className="max-w-7xl mx-auto space-y-10 pt-4 pb-20 animate-in fade-in duration-500">
+      <main className="flex-1 ml-0 md:ml-72 p-6 overflow-x-hidden transition-colors duration-300 relative">
+        {/* Top Toolbar */}
+        <div className="sticky top-0 z-40 -mx-6 -mt-6 px-6 py-4 mb-6 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between shadow-sm">
+           <div className="flex items-center gap-4">
+              <h2 className="text-xl font-bold text-white capitalize tracking-tight">
+                 {currentMode === 'home' ? 'Dashboard' : currentMode.replace(/([A-Z])/g, ' $1').trim()}
+              </h2>
+           </div>
+           
+           <div className="flex items-center gap-1 sm:gap-2">
+              <button 
+                onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' || theme === 'cyberpunk' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
               
-              {/* Hero Greeting Section */}
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 shadow-2xl p-8 md:p-12 text-white border border-white/10">
-                  {/* Decorative Elements */}
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none mix-blend-overlay"></div>
-                  <div className="absolute bottom-0 left-20 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl pointer-events-none mix-blend-overlay"></div>
+              <button 
+                onClick={() => setCurrentMode('settings')}
+                className={`p-2 rounded-xl transition-colors ${currentMode === 'settings' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
+                title="Pengaturan Admin"
+              >
+                <Settings size={20} />
+              </button>
+
+              <button 
+                onClick={() => setCurrentMode('profile')}
+                className={`p-2 rounded-xl transition-colors ${currentMode === 'profile' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
+                title="Profil Saya"
+              >
+                <UserCircle size={20} />
+              </button>
+
+              <div className="w-px h-6 bg-white/10 mx-1 sm:mx-2"></div>
+
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors font-medium text-sm"
+              >
+                <LogOut size={18} />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+           </div>
+        </div>
+
+        {currentMode === 'home' ? (
+           <div className="max-w-7xl mx-auto space-y-6 pt-4 pb-20 animate-in fade-in duration-500">
+              
+              {/* Server Status Section */}
+              <div className="bg-white dark:bg-[#0c0c0e] rounded-[2rem] shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+                  <div className="bg-[#2d3748] text-white p-6 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                          <Activity size={24} className="text-slate-300" />
+                      </div>
+                      <div>
+                          <h2 className="text-xl font-bold">Status Server Sulap Foto</h2>
+                          <p className="text-sm text-slate-300">Total: 784,367 Gambar Dihasilkan.</p>
+                      </div>
+                  </div>
                   
-                  <div className="relative z-10">
-                      <div className="flex items-center gap-2 text-emerald-100 font-bold uppercase tracking-wider text-xs mb-3">
-                          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                          System Operational
-                      </div>
-                      <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight leading-tight">
-                          {greeting}, <br/> {userProfile.fullName}.
-                      </h1>
-                      <p className="text-emerald-50 max-w-xl text-lg leading-relaxed font-light mb-8">
-                          Selamat datang kembali di INDIGITAL STUDIO. Akses fitur generative AI Gemini 3 Pro & Veo untuk mempercepat kreativitas Anda.
-                      </p>
-                      <div className="flex flex-wrap gap-4">
-                          <button 
-                            onClick={() => setCurrentMode('imagine')} 
-                            className="bg-white text-emerald-800 px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-black/10 hover:bg-emerald-50 hover:scale-105 transition-all flex items-center gap-2"
-                          >
-                              <ImageIcon size={20} /> Buat Gambar
-                          </button>
-                          <button 
-                            onClick={() => setCurrentMode('veo')} 
-                            className="bg-emerald-800/40 hover:bg-emerald-800/60 text-white border border-white/20 px-8 py-3.5 rounded-2xl font-bold transition-all backdrop-blur-md flex items-center gap-2"
-                          >
-                              <Video size={20} /> Buat Video
-                          </button>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
-                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Activity size={28} />
-                      </div>
-                      <div>
-                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Server Status</div>
-                          <div className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                              Online <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                          </div>
-                      </div>
-                  </div>
-                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
-                      <div className="w-14 h-14 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Zap size={28} />
-                      </div>
-                      <div>
-                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Banana Credit</div>
-                          <div className="text-2xl font-bold text-slate-800 dark:text-white">Unlimited</div>
-                      </div>
-                  </div>
-                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
-                      <div className="w-14 h-14 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Layers size={28} />
-                      </div>
-                      <div>
-                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Kreasi</div>
-                          <div className="text-2xl font-bold text-slate-800 dark:text-white">{recentHistory.length || 0} File</div>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Quick Actions Grid */}
-              <div>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                      <Sparkles className="text-emerald-500" /> Akses Cepat
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                          { id: 'banana', label: 'Banana Fast', desc: 'Instan Image Gen', icon: <Zap size={24} />, color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900/20' },
-                          { id: 'veo', label: 'Google Veo', desc: 'Text to Video', icon: <Video size={24} />, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/20' },
-                          { id: 'faceswap', label: 'Face Swap', desc: 'Ganti Wajah', icon: <Users size={24} />, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/20' },
-                          { id: 'removebg', label: 'Hapus BG', desc: 'Transparent BG', icon: <ImageMinus size={24} />, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/20' },
-                      ].map((item) => (
-                          <button 
-                              key={item.id}
-                              onClick={() => setCurrentMode(item.id as FeatureMode)}
-                              className="group bg-white dark:bg-[#0c0c0e] hover:bg-slate-50 dark:hover:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-lg transition-all text-left flex flex-col justify-between h-40"
-                          >
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.bg} ${item.color} mb-3 group-hover:scale-110 transition-transform`}>
-                                  {item.icon}
-                              </div>
-                              <div>
-                                <span className="font-bold text-lg text-slate-800 dark:text-white block group-hover:text-emerald-600 transition-colors">
-                                    {item.label}
-                                </span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</span>
-                              </div>
-                          </button>
-                      ))}
-                  </div>
-              </div>
-
-              {/* Recent History */}
-              {recentHistory.length > 0 && (
-                  <div>
-                      <div className="flex justify-between items-end mb-6">
-                          <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                              <Clock className="text-emerald-500" /> Riwayat Terakhir
-                          </h3>
-                          <button onClick={() => setCurrentMode('gallery')} className="text-sm font-bold text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-xl transition-all flex items-center gap-2">
-                              Lihat Galeri <ArrowRight size={16} />
-                          </button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                          {recentHistory.map((item, idx) => (
-                              <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer" onClick={() => setCurrentMode('gallery')}>
-                                  {item.type === 'video' ? (
-                                      <div className="w-full h-full flex items-center justify-center bg-black">
-                                          <Video className="text-white opacity-50 w-12 h-12" />
+                  <div className="p-6 overflow-x-auto custom-scrollbar">
+                      <div className="flex gap-4 min-w-max pb-4">
+                          {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                              <div key={num} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 w-[280px] flex-shrink-0 shadow-sm">
+                                  <div className="flex justify-between items-center mb-4">
+                                      <span className="font-semibold text-slate-700 dark:text-slate-300">Server {num}</span>
+                                      <span className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-emerald-100 dark:border-emerald-800">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+                                      </span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-y-4 gap-x-2 mb-4">
+                                      <div>
+                                          <div className="text-[10px] text-slate-500 font-bold mb-1">CPU</div>
+                                          <div className="text-blue-500 font-bold text-lg">{(Math.random() * 20 + 5).toFixed(1)}%</div>
                                       </div>
-                                  ) : (
-                                      <img src={item.thumbnail || item.results[0]} alt="Recent" className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" />
-                                  )}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-900/50 backdrop-blur w-fit px-2 py-1 rounded mb-1">{item.mode}</span>
-                                      <div className="flex items-center gap-1 text-slate-300 text-[10px]">
-                                         <Calendar size={10} /> {new Date(item.timestamp).toLocaleDateString()}
+                                      <div>
+                                          <div className="text-[10px] text-slate-500 font-bold mb-1">RAM</div>
+                                          <div className="text-purple-500 font-bold text-lg">{(Math.random() * 20 + 10).toFixed(1)}%</div>
                                       </div>
+                                      <div>
+                                          <div className="text-[10px] text-slate-500 font-bold mb-1">STORAGE</div>
+                                          <div className="text-amber-500 font-bold text-lg">{Math.floor(Math.random() * 20 + 5)}%</div>
+                                      </div>
+                                      <div>
+                                          <div className="text-[10px] text-slate-500 font-bold mb-1">UPTIME</div>
+                                          <div className="text-emerald-500 font-bold text-lg">{(Math.random() * 200 + 50).toFixed(2)}</div>
+                                      </div>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-3">
+                                      Total: <span className="font-bold text-slate-700 dark:text-slate-300">{Math.floor(Math.random() * 200000 + 20000).toLocaleString()}</span> gambar telah dihasilkan dari server ini.
                                   </div>
                               </div>
                           ))}
                       </div>
                   </div>
-              )}
+              </div>
 
+              {/* Middle Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Audio Player */}
+                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                      <div className="font-bold text-slate-800 dark:text-white">Sulap Foto - Idul Fitri</div>
+                      <div className="flex items-center gap-3">
+                          <button className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                              <Pause size={14} />
+                          </button>
+                          <button className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                              <SkipForward size={14} />
+                          </button>
+                          <div className="flex items-center gap-2 ml-2">
+                              <Volume2 size={16} className="text-slate-400" />
+                              <div className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                                  <div className="w-2/3 h-full bg-emerald-500 rounded-full"></div>
+                                  <div className="absolute left-2/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-emerald-600 rounded-full"></div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Boost Mode */}
+                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-white/10 flex items-center justify-between relative">
+                      <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center text-amber-500">
+                              <Zap size={24} className="fill-current" />
+                          </div>
+                          <div>
+                              <div className="font-bold text-slate-800 dark:text-white">Boost Mode</div>
+                              <div className="text-xs text-slate-500">Sisa kuota boost 0 gambar</div>
+                          </div>
+                      </div>
+                      <div className="relative flex items-center">
+                          {/* Tooltip */}
+                          <div className="absolute -top-10 right-0 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
+                              Aktifkan Boost Mode!
+                              <div className="absolute -bottom-1 right-4 w-2 h-2 bg-slate-900 rotate-45"></div>
+                          </div>
+                          {/* Toggle */}
+                          <div className="w-12 h-6 bg-slate-200 dark:bg-slate-700 rounded-full relative cursor-pointer border border-slate-300 dark:border-slate-600">
+                              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Bottom Tabs & Content */}
+              <div className="space-y-6">
+                  {/* Tabs */}
+                  <div className="grid grid-cols-2 gap-4">
+                      <button className="bg-white dark:bg-[#0c0c0e] py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-white/10 font-bold text-emerald-600 dark:text-emerald-400 text-lg">
+                          Assistant
+                      </button>
+                      <button className="bg-white dark:bg-[#0c0c0e] py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-white/10 font-bold text-slate-600 dark:text-slate-400 text-lg flex items-center justify-center gap-2">
+                          Chat Group <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">New</span>
+                      </button>
+                  </div>
+
+                  {/* Content Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Assistant Panel */}
+                      <div className="bg-white dark:bg-[#0c0c0e] rounded-[2rem] shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+                          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+                              <div className="w-12 h-12 bg-[#00bfa5] rounded-full flex items-center justify-center text-white">
+                                  <Bot size={24} />
+                              </div>
+                              <div>
+                                  <h3 className="font-bold text-lg text-slate-800 dark:text-white">Assistant</h3>
+                                  <p className="text-xs text-slate-500">Selasa, 24 Maret - 12.19</p>
+                              </div>
+                          </div>
+                          <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 min-h-[300px]">
+                              <div className="bg-[#fff8e1] dark:bg-amber-900/10 border-l-4 border-amber-400 p-5 rounded-r-xl shadow-sm">
+                                  <h4 className="font-bold text-slate-800 dark:text-white mb-2">Changelog 6.4</h4>
+                                  <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-1 text-sm">
+                                      <li>Pertukaran model GPT Image menjadi Flux Pro 2 di private server</li>
+                                      <li>Perbaikan stabilitas dan performa aplikasi</li>
+                                  </ul>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Chat Group Panel */}
+                      <div className="bg-white dark:bg-[#0c0c0e] rounded-[2rem] shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+                          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-[#00bfa5] rounded-full flex items-center justify-center text-white">
+                                      <Users size={24} />
+                                  </div>
+                                  <div>
+                                      <div className="flex items-center gap-2">
+                                          <h3 className="font-bold text-lg text-slate-800 dark:text-white">Chat Group</h3>
+                                          <span className="bg-[#00bfa5] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span> 2 online
+                                          </span>
+                                          <Eye size={16} className="text-slate-400" />
+                                      </div>
+                                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                          Masuk sebagai: <span className="font-semibold text-fuchsia-500 dark:text-fuchsia-400">andri_waskit</span> 
+                                          <span className="bg-amber-400 text-white text-[8px] font-bold px-1 rounded">VIP</span>
+                                          <span className="text-fuchsia-500 font-medium">(Jawa Timur)</span>
+                                      </p>
+                                  </div>
+                              </div>
+                              <button className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors">
+                                  <LogOut size={20} />
+                              </button>
+                          </div>
+                          <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 min-h-[300px]">
+                              <div className="bg-[#e3f2fd] dark:bg-blue-900/20 p-4 rounded-2xl rounded-tl-sm max-w-[85%]">
+                                  <div className="flex justify-between items-center mb-2">
+                                      <div className="flex items-center gap-2">
+                                          <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">ali (Kalimantan Barat)</span>
+                                          <span className="bg-amber-400 text-white text-[8px] font-bold px-1 rounded">VIP</span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400">11:20</span>
+                                  </div>
+                                  <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                      Selamat Hari Raya Idul Fitri 1447 H dari saya Ali, mari kita amalkan pesan 'Wata'awanu 'alal birri' dalam setiap langkah karena 'maaf adalah permata jiwa', sehingga pada hari yang fitri ini izinkan saya memohon maaf lahir dan batin.
+                                  </p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
            </div>
         ) : (
             <>
