@@ -44,8 +44,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setThem
         if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
              // @ts-ignore
              setApiKey(import.meta.env.VITE_API_KEY);
-        } else if (process.env.API_KEY) {
-             setApiKey(process.env.API_KEY);
+        } else if (process.env.GEMINI_API_KEY) {
+             setApiKey(process.env.GEMINI_API_KEY);
         }
     }
     calculateStorageSize();

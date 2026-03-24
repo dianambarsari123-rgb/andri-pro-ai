@@ -131,8 +131,10 @@ const pcmToWav = (base64PCM: string): string => {
   wavBytes.set(buffer, 44);
 
   let binary = '';
-  for (let i = 0; i < wavBytes.byteLength; i++) {
-    binary += String.fromCharCode(wavBytes[i]);
+  const chunkSize = 8192;
+  for (let i = 0; i < wavBytes.length; i += chunkSize) {
+    const chunk = wavBytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
   }
   return `data:audio/wav;base64,${btoa(binary)}`;
 };
@@ -142,7 +144,7 @@ const pcmToWav = (base64PCM: string): string => {
  */
 export const chatWithGemini = async (history: ChatMessage[], message: string): Promise<string> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const contents = history.map(h => ({
       role: h.role,
       parts: [{ text: h.text }]
@@ -167,7 +169,7 @@ export const chatWithGemini = async (history: ChatMessage[], message: string): P
 export const analyzeImagesToPrompt = async (images: UploadedImage[]): Promise<string> => {
   if (images.length === 0) return "";
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const imageParts = await Promise.all(images.map((img) => fileToGenerativePart(img.file)));
     
     const response = await ai.models.generateContent({
@@ -193,7 +195,7 @@ export const analyzeImagesToPrompt = async (images: UploadedImage[]): Promise<st
 export const enhancePrompt = async (prompt: string): Promise<string> => {
   if (!prompt.trim()) return prompt;
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: PRO_MODEL,
       contents: [{
@@ -209,7 +211,7 @@ export const enhancePrompt = async (prompt: string): Promise<string> => {
 
 export const generateSpeech = async (text: string, voiceName: string = 'Bram', sampleAudio?: { data: string, mimeType: string }): Promise<string> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
         if (sampleAudio) {
             // VOICE CLONING via Multimodal Gemini 3
@@ -222,7 +224,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Bram', s
                     ]
                 }],
                 config: {
-                    responseModalities: [Modality.AUDIO],
+                    responseModalities: ['AUDIO'],
                 },
             });
 
@@ -264,7 +266,7 @@ export const generateImage = async (
   mode: FeatureMode,
   options?: { negativePrompt?: string; seed?: number; bananaMode?: 'fast' | 'pro' }
 ): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const imageParts = await Promise.all(images.map((img) => fileToGenerativePart(img.file)));
     
     let systemInstruction = "You are a professional AI image generator. Create high-quality results.";
@@ -302,7 +304,7 @@ export const generateVideo = async (
     mode: FeatureMode,
     quality: '720p' | '1080p' = '1080p'
 ): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
     let imagePart = undefined;
     if (images.length > 0) {
@@ -328,5 +330,5 @@ export const generateVideo = async (
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (!downloadLink) throw new Error("Gagal mendapatkan link download video.");
-    return `${downloadLink}&key=${process.env.API_KEY}`;
+    return `${downloadLink}&key=${process.env.GEMINI_API_KEY}`;
 };

@@ -27,7 +27,8 @@ import {
     Play,
     Cpu,
     Clock,
-    MousePointer2
+    MousePointer2,
+    AudioLines
 } from 'lucide-react';
 import { HistoryItem, FeatureMode } from '../types';
 import { upscaleImage } from '../services/huggingfaceService';
@@ -40,7 +41,7 @@ interface GalleryItem {
     prompt: string;
     mode: FeatureMode;
     timestamp: number;
-    type: 'image' | 'video';
+    type: 'image' | 'video' | 'audio';
 }
 
 interface GalleryProps {
@@ -122,6 +123,7 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                 parsed.forEach(item => {
                     item.results.forEach((res, idx) => {
                         const isVideo = item.type === 'video' || res.includes('data:video') || res.includes('.mp4');
+                        const isAudio = item.type === 'audio' || res.includes('data:audio') || res.includes('.wav') || res.includes('.mp3');
                         
                         flattened.push({
                             id: `${item.id}-${idx}`,
@@ -130,7 +132,7 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                             prompt: item.prompt,
                             mode: item.mode,
                             timestamp: item.timestamp,
-                            type: isVideo ? 'video' : 'image'
+                            type: isVideo ? 'video' : isAudio ? 'audio' : 'image'
                         });
                     });
                 });
@@ -254,6 +256,16 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                     <video src={item.url} className="w-full h-full object-contain" autoPlay loop muted playsInline />
                     <div className="absolute top-2 left-2 bg-black/60 text-white p-1 rounded-full pointer-events-none">
                          <Play size={10} fill="currentColor" />
+                    </div>
+                </div>
+            );
+        }
+        if (item.type === 'audio') {
+            return (
+                <div className={`relative ${className} bg-slate-900 flex items-center justify-center overflow-hidden`}>
+                    <audio src={item.url} controls className="w-full px-4" />
+                    <div className="absolute top-2 left-2 bg-black/60 text-white p-1 rounded-full pointer-events-none">
+                         <AudioLines size={10} fill="currentColor" />
                     </div>
                 </div>
             );
@@ -413,6 +425,11 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                                                 </div>
                                             </div>
                                         </div>
+                                    ) : item.type === 'audio' ? (
+                                        <div className="w-full h-full relative bg-slate-900 flex flex-col items-center justify-center p-4">
+                                            <AudioLines size={48} className="text-emerald-500 mb-4" />
+                                            <audio src={item.url} controls className="w-full max-w-[200px]" />
+                                        </div>
                                     ) : (
                                         <img src={item.url} alt={item.prompt} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                     )}
@@ -427,7 +444,7 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                                                     <Star size={18} fill={favorites.has(item.id) ? "currentColor" : "none"} />
                                                 </button>
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleDownload(item.url, `INDIGITAL-${item.id}.png`); }}
+                                                    onClick={(e) => { e.stopPropagation(); handleDownload(item.url, `INDIGITAL-${item.id}.${item.type === 'video' ? 'mp4' : item.type === 'audio' ? 'wav' : 'png'}`); }}
                                                     className="p-2.5 bg-white/10 hover:bg-emerald-500 rounded-xl text-white transition-all shadow-lg border border-white/10"
                                                 >
                                                     <Download size={18} />
@@ -449,6 +466,9 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
 
                                     {item.type === 'video' && (
                                         <div className="absolute top-4 left-4 px-3 py-1 bg-pink-500 text-white text-[10px] font-black rounded-lg shadow-lg">VIDEO</div>
+                                    )}
+                                    {item.type === 'audio' && (
+                                        <div className="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-lg shadow-lg">AUDIO</div>
                                     )}
                                 </div>
                             )
@@ -592,6 +612,11 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-40 pointer-events-none"></div>
                              {selectedItem.type === 'video' ? (
                                 <video src={selectedItem.url} controls autoPlay className="max-w-full max-h-full rounded-[2rem] shadow-2xl border border-white/5 z-10" />
+                             ) : selectedItem.type === 'audio' ? (
+                                <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl border border-white/10 z-10 flex flex-col items-center">
+                                    <AudioLines size={64} className="text-emerald-500 mb-8" />
+                                    <audio src={selectedItem.url} controls autoPlay className="w-full" />
+                                </div>
                              ) : (
                                 <img 
                                     src={upscaledUrl || selectedItem.url} 
@@ -648,7 +673,7 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                             </div>
 
                             <div className="p-8 bg-slate-50 dark:bg-[#0a0a0c] border-t border-slate-200 dark:border-white/10 space-y-4">
-                                {selectedItem.type !== 'video' && !upscaledUrl && (
+                                {selectedItem.type === 'image' && !upscaledUrl && (
                                     <button 
                                         onClick={handleUpscale}
                                         disabled={isUpscaling}
@@ -661,7 +686,7 @@ const Gallery: React.FC<GalleryProps> = ({ onNavigate }) => {
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <button 
-                                        onClick={() => handleDownload(upscaledUrl || selectedItem.url, `INDIGITAL-${selectedItem.id}.png`)}
+                                        onClick={() => handleDownload(upscaledUrl || selectedItem.url, `INDIGITAL-${selectedItem.id}.${selectedItem.type === 'video' ? 'mp4' : selectedItem.type === 'audio' ? 'wav' : 'png'}`)}
                                         className="py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/40"
                                     >
                                         <Download size={20} /> SIMPAN
