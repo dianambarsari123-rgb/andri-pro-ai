@@ -1,17 +1,23 @@
+
 <!DOCTYPE html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Andri AI Pro</title>
+    <title>INDIGITAL STUDIO</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
     <style>
       body {
         font-family: 'Inter', sans-serif;
       }
-      /* Custom Scrollbar for a cleaner look */
+      /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -24,6 +30,103 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+      }
+
+      /* Glitch Animation Effects */
+      @keyframes glitch-anim {
+        0% { clip-path: inset(40% 0 61% 0); transform: translate(-5px, -2px); }
+        20% { clip-path: inset(92% 0 1% 0); transform: translate(5px, 2px); }
+        40% { clip-path: inset(43% 0 1% 0); transform: translate(-5px, 2px); }
+        60% { clip-path: inset(25% 0 58% 0); transform: translate(5px, -2px); }
+        80% { clip-path: inset(54% 0 7% 0); transform: translate(-5px, 2px); }
+        100% { clip-path: inset(58% 0 43% 0); transform: translate(5px, -2px); }
+      }
+
+      @keyframes glitch-skew {
+        0% { transform: skew(0deg); opacity: 1; }
+        10% { transform: skew(-5deg); opacity: 0.8; }
+        20% { transform: skew(5deg); opacity: 1; }
+        30% { transform: skew(-2deg); opacity: 0.9; }
+        40% { transform: skew(2deg); opacity: 1; }
+        50% { transform: skew(0deg); opacity: 1; }
+      }
+
+      .glitch-effect {
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .glitch-effect.active-glitch {
+        animation: glitch-skew 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+      }
+
+      .glitch-effect.active-glitch::before,
+      .glitch-effect.active-glitch::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: inherit;
+        z-index: 10;
+        pointer-events: none;
+      }
+
+      .glitch-effect.active-glitch::before {
+        left: 3px;
+        text-shadow: -2px 0 #ff00c1;
+        clip: rect(44px, 9999px, 56px, 0);
+        animation: glitch-anim 0.4s infinite linear alternate-reverse;
+        background: rgba(255, 0, 193, 0.15);
+      }
+
+      .glitch-effect.active-glitch::after {
+        left: -3px;
+        text-shadow: -2px 0 #00fff9;
+        clip: rect(44px, 9999px, 56px, 0);
+        animation: glitch-anim 0.3s infinite linear alternate-reverse;
+        background: rgba(0, 255, 249, 0.15);
+      }
+
+      .scanline-effect::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(18, 16, 16, 0) 50%,
+          rgba(0, 0, 0, 0.1) 50%
+        );
+        background-size: 100% 4px;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0.3;
+      }
+      
+      /* Slider Styling for Comparison */
+      .compare-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        cursor: ew-resize;
+        border: 4px solid #6366f1;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+      }
+      
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 4px;
+        height: 100vh;
+        background: white;
+        cursor: ew-resize;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
       }
     </style>
   <script type="importmap">
@@ -38,8 +141,10 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-gray-50 text-slate-800 antialiased">
     <div id="root"></div>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

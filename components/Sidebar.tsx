@@ -42,7 +42,11 @@ import {
   UserCircle,
   Image,
   X,
-  UserCheck
+  UserCheck,
+  Images,
+  Crown,
+  Sun,
+  AudioLines
 } from 'lucide-react';
 import { FeatureMode } from '../types';
 
@@ -53,6 +57,9 @@ interface SidebarProps {
   className?: string;
   isOpen?: boolean;
   onClose?: () => void;
+  isLuxury?: boolean;
+  currentTheme?: string;
+  onToggleTheme?: () => void;
 }
 
 // Define the structure of the menu
@@ -69,7 +76,7 @@ type MenuGroup = {
   items: MenuItem[];
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, className, isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, className, isOpen, onClose, isLuxury = false, currentTheme, onToggleTheme }) => {
   // State to track which groups are expanded
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'edit_group': true,
@@ -80,12 +87,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
   });
 
   // Load username/role for display
-  const [userInfo, setUserInfo] = useState({ name: 'Andri AI', role: 'Superadmin V3.0' });
+  const [userInfo, setUserInfo] = useState({ name: 'INDIGITAL STUDIO', role: 'Superadmin V3.0' });
   useEffect(() => {
      const storedProfile = localStorage.getItem('user_profile');
      if (storedProfile) {
         const p = JSON.parse(storedProfile);
-        setUserInfo({ name: p.fullName || 'Andri AI', role: p.role || 'Superadmin' });
+        setUserInfo({ name: p.fullName || 'INDIGITAL STUDIO', role: p.role || 'Superadmin' });
      }
   }, [currentMode]); // Refresh on nav change in case profile updated
 
@@ -93,10 +100,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
   const MENU_GROUPS: MenuGroup[] = [
     {
       id: 'edit_group',
-      label: 'EDITING',
+      label: 'EDITING & CREATIVE',
       icon: <Layers size={16} />,
       items: [
         { mode: 'imagine', label: 'Buat Gambar (Text)', icon: <Image size={18} /> }, 
+        { mode: 'tts', label: 'Text to Speech', icon: <AudioLines size={18} /> },
         { mode: 'merge', label: 'Gabung Foto', icon: <Layers size={18} /> },
         { mode: 'thumbnail', label: 'Foto Miniatur', icon: <Edit3 size={18} /> },
         { mode: 'expand', label: 'Perluas Foto', icon: <Maximize2 size={18} /> },
@@ -187,37 +195,40 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
     }));
   };
 
+  const logoColor = isLuxury ? 'from-amber-400 to-yellow-600' : 'from-emerald-500 to-cyan-600';
+  const logoShadow = isLuxury ? 'shadow-amber-500/20' : 'shadow-emerald-500/20';
+
   return (
     <>
       {/* Mobile Overlay */}
       {isOpen && (
         <div 
-           className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+           className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-300"
            onClick={onClose}
         ></div>
       )}
 
-      {/* Sidebar Container - Modern Glass */}
-      <div className={`w-72 bg-[#09090b] text-white border-r border-white/5 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-transform duration-300 ease-in-out shadow-2xl ${
+      {/* Sidebar Container - Always Dark */}
+      <div className={`dark w-72 bg-slate-800 text-slate-300 border-r border-slate-700 h-screen flex flex-col fixed left-0 top-0 overflow-y-auto z-50 transition-transform duration-300 ease-in-out shadow-2xl ${
          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } ${className}`}>
         
         {/* Mobile Close Button */}
-        <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-white hover:bg-white/10 p-2 rounded-full">
+        <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-slate-500 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10 p-2 rounded-full transition-colors">
            <X size={20} />
         </button>
 
         {/* Premium Brand Header */}
         <div className="p-8 pb-6 shrink-0 relative overflow-hidden group cursor-pointer" onClick={() => onNavigate('home')}>
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300">
-              <Sparkles className="text-white w-5 h-5 animate-pulse" />
+            <div className={`w-10 h-10 bg-gradient-to-tr ${logoColor} rounded-xl flex items-center justify-center shadow-lg ${logoShadow} ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-300`}>
+              {isLuxury ? <Crown className="text-white w-5 h-5 animate-pulse" /> : <Sparkles className="text-white w-5 h-5 animate-pulse" />}
             </div>
             <div>
-              <h1 className="text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">Andri AI <span className="text-emerald-400">Pro</span></h1>
+              <h1 className="text-slate-800 dark:text-white font-bold text-lg tracking-tight leading-none mb-1 font-['Inter']">INDIGITAL <span className={isLuxury ? "text-amber-400" : "text-emerald-500 dark:text-emerald-400"}>STUDIO</span></h1>
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse box-shadow-glow"></span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${isLuxury ? 'bg-amber-400' : 'bg-emerald-500'} animate-pulse box-shadow-glow`}></span>
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium tracking-widest uppercase truncate max-w-[140px]">{userInfo.role}</span>
               </div>
             </div>
           </div>
@@ -228,31 +239,41 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
           
           {/* Core Features (Always Visible) */}
           <div className="space-y-1">
-             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-4">Menu Utama</p>
+             <p className="px-3 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-3 pl-4">Menu Utama</p>
              <NavItem 
                 icon={<Home size={18} />} 
                 label="Dashboard" 
                 active={currentMode === 'home'} 
                 onClick={() => onNavigate('home')}
+                isLuxury={isLuxury}
+              />
+              <NavItem 
+                icon={<Images size={18} />} 
+                label="Galeri Saya" 
+                active={currentMode === 'gallery'} 
+                onClick={() => onNavigate('gallery')}
+                isLuxury={isLuxury}
               />
               <NavItem 
                 icon={<Zap size={18} />} 
                 label="Banana AI (Fast)" 
                 active={currentMode === 'banana'} 
                 onClick={() => onNavigate('banana')}
-                highlightColor="text-yellow-400"
+                highlightColor={isLuxury ? "text-amber-400" : "text-yellow-600 dark:text-yellow-400"}
+                isLuxury={isLuxury}
               />
               <NavItem 
                 icon={<Video size={18} />} 
                 label="Google Veo 3" 
                 active={currentMode === 'veo'} 
                 onClick={() => onNavigate('veo')}
-                highlightColor="text-purple-400"
+                highlightColor={isLuxury ? "text-purple-300" : "text-purple-600 dark:text-purple-400"}
+                isLuxury={isLuxury}
               />
           </div>
 
           {/* Separator */}
-          <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent mx-4"></div>
+          <div className="h-px bg-slate-100 dark:bg-white/5 mx-4"></div>
 
           {/* Collapsible Groups */}
           <div className="space-y-4">
@@ -261,11 +282,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
                 <button
                   onClick={() => toggleGroup(group.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-200 group ${
-                    expandedGroups[group.id] ? 'text-white bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                    expandedGroups[group.id] 
+                      ? 'text-slate-800 bg-slate-100 dark:text-white dark:bg-white/5' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-lg transition-colors ${expandedGroups[group.id] ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                    <div className={`p-1.5 rounded-lg transition-colors ${
+                      expandedGroups[group.id] 
+                        ? (isLuxury ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400')
+                        : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-400'
+                      }`}>
                       {group.icon}
                     </div>
                     <span>{group.label}</span>
@@ -279,7 +306,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
                   expandedGroups[group.id] ? 'max-h-[800px] opacity-100 pt-2' : 'max-h-0 opacity-0'
                 }`}>
                   {/* Visual Line for tree structure */}
-                  <div className="absolute left-[1.35rem] top-0 bottom-4 w-px bg-gradient-to-b from-white/10 to-transparent"></div>
+                  <div className="absolute left-[1.35rem] top-0 bottom-4 w-px bg-slate-200 dark:bg-gradient-to-b dark:from-white/10 dark:to-transparent"></div>
                   
                   {group.items.map((item) => (
                     <NavItem 
@@ -289,6 +316,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
                       active={currentMode === item.mode} 
                       onClick={() => onNavigate(item.mode)}
                       isSubItem
+                      isLuxury={isLuxury}
                     />
                   ))}
                 </div>
@@ -299,27 +327,42 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
         </nav>
 
         {/* Footer / Settings */}
-        <div className="p-4 bg-black/20 border-t border-white/5 space-y-1 mt-auto relative z-20 backdrop-blur-xl">
+        <div className="p-4 bg-slate-50/80 dark:bg-black/20 border-t border-slate-200 dark:border-white/5 space-y-1 mt-auto relative z-20 backdrop-blur-xl">
            
            {/* Profile Link in Footer */}
            <button 
             onClick={() => onNavigate('profile')}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
               currentMode === 'profile' 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? (isLuxury ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20')
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5'
             }`}
           >
-            <UserCircle size={18} className="group-hover:text-emerald-400 transition-colors" />
+            <UserCircle size={18} className={`transition-colors ${isLuxury ? 'group-hover:text-amber-400' : 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400'}`} />
             <span>Profil Saya</span>
           </button>
+
+          {/* Theme Toggle Button */}
+          {onToggleTheme && (
+              <button 
+                onClick={onToggleTheme}
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
+              >
+                {currentTheme === 'light' || currentTheme === 'luxury' ? (
+                   <Moon size={18} className="group-hover:text-purple-400 transition-colors" />
+                ) : (
+                   <Sun size={18} className="group-hover:text-amber-400 transition-colors" />
+                )}
+                <span>{currentTheme === 'light' || currentTheme === 'luxury' ? 'Mode Gelap' : 'Mode Terang'}</span>
+              </button>
+          )}
 
           <button 
             onClick={() => onNavigate('settings')}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
               currentMode === 'settings' 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? (isLuxury ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20')
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5'
             }`}
           >
             <Settings size={18} className={`transition-transform duration-500 ${currentMode === 'settings' ? 'rotate-90' : 'group-hover:rotate-90'}`} />
@@ -328,7 +371,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentMode, onNavigate, onLogout, cl
 
           <button 
             onClick={onLogout}
-            className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-500/20"
+            className="flex items-center gap-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-500/10 transition-all w-full px-4 py-3 rounded-xl group border border-transparent hover:border-red-100 dark:hover:border-red-500/20"
           >
             <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium text-sm">Keluar System</span>
@@ -346,24 +389,35 @@ interface NavItemProps {
   isSubItem?: boolean;
   onClick: () => void;
   highlightColor?: string;
+  isLuxury?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onClick, highlightColor }) => {
+const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onClick, highlightColor, isLuxury }) => {
+  // Styles based on theme - Fixed Contrast for Light Mode
+  // If luxury & active: bg is slight amber tint, text is DARK AMBER in light mode, bright amber in dark mode.
+  const activeBg = isLuxury 
+     ? 'bg-gradient-to-r from-amber-500/10 to-transparent text-amber-700 dark:bg-slate-900/50 dark:text-amber-400 border-l-2 border-amber-500'
+     : 'bg-gradient-to-r from-emerald-50 to-transparent dark:bg-slate-900/80 dark:text-white border-l-2 border-emerald-500';
+  
+  const activeIconColor = isLuxury
+     ? 'text-amber-600 dark:text-amber-400 dark:drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+     : 'text-emerald-700 dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]';
+
   return (
     <button
       onClick={onClick}
       className={`w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 relative overflow-hidden ${
         active
-          ? 'bg-gradient-to-r from-emerald-500/20 to-transparent text-white border-l-2 border-emerald-500'
-          : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+          ? activeBg
+          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 border-l-2 border-transparent'
       } ${isSubItem ? 'ml-3 w-[calc(100%-0.75rem)]' : ''}`}
     >
       
       {/* Icon with Glow Effect on Active */}
       <span className={`relative mr-3 shrink-0 transition-colors duration-300 ${
         active 
-          ? highlightColor || 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' 
-          : 'text-slate-500 group-hover:text-slate-300'
+          ? highlightColor || activeIconColor 
+          : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'
       }`}>
         {icon}
       </span>
@@ -372,7 +426,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, isSubItem, onCli
 
       {/* Hover Light Effect */}
       { !active && (
-         <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+         <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-slate-200/50 to-transparent dark:via-white/5 transition-transform duration-1000 ease-in-out pointer-events-none"></div>
       )}
     </button>
   );

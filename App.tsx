@@ -2,720 +2,347 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ImageMerger from './components/ImageMerger';
-import Login from './components/Login';
-import AdminSettings from './components/AdminSettings';
+import Gallery from './components/Gallery';
 import UserProfile from './components/UserProfile';
+import AdminSettings from './components/AdminSettings';
+import Login from './components/Login';
+import LandingPage from './components/LandingPage';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
+import ContactSupport from './components/ContactSupport';
 import ChatBot from './components/ChatBot';
-import { Sparkles, ArrowRight, Layers, Zap, Activity, Cpu, ShieldCheck, Globe, Video, Heart, Briefcase, Camera, Music, Instagram, Facebook, Twitter, Youtube, MessageSquare, Palette, History, Image, Command, Menu, Users } from 'lucide-react';
-import { FeatureMode, FeatureConfig } from './types';
+import { FeatureMode, FeatureConfig, HistoryItem } from './types';
+import { 
+  Sparkles, Layers, Edit3, ImageMinus, Palette, Users, Video, 
+  Scissors, Heart, Baby, Smile, User, Moon, UserSquare, 
+  Home as HomeIcon, LayoutTemplate, PenTool, UserCheck, 
+  ShoppingBag, Shirt, Type, Columns, FileText, Youtube, 
+  Instagram, Facebook, Twitter, Download, Zap, Image as ImageIcon,
+  Maximize2, Eraser, Film, AudioLines, Clock, ArrowRight, Activity, Calendar
+} from 'lucide-react';
 
-// Global JSX declaration to ensure dotlottie-wc is recognized
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        src: string;
-        autoplay?: boolean;
-        loop?: boolean;
-        style?: React.CSSProperties;
-      }, HTMLElement>;
-    }
-  }
-}
-
-// --- CONFIGURATION FOR ALL FEATURES ---
-const FEATURES: Record<FeatureMode, FeatureConfig> = {
-  home: {
-    id: 'home',
-    title: 'Beranda',
-    description: 'Dashboard Utama',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0
-  },
-  profile: {
-    id: 'profile',
-    title: 'Profil Pengguna',
-    description: 'Kelola informasi akun dan keamanan.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0
-  },
-  settings: {
-    id: 'settings',
-    title: 'Pengaturan Admin',
-    description: 'Konfigurasi Sistem',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0
-  },
-  chatbot: {
-    id: 'chatbot',
-    title: 'AI Chatbot Assistant',
-    description: 'Tanya jawab cerdas dengan Gemini 3 Pro.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'chat'
-  },
-  
-  // EDITING
-  merge: {
-    id: 'merge',
-    title: 'Gabung Foto AI',
-    description: 'Gabungkan subjek dengan latar belakang baru secara seamless.',
-    defaultPrompt: 'Gabungkan subjek dari foto pertama ke dalam latar belakang foto kedua. Sesuaikan pencahayaan, bayangan, dan tone warna agar terlihat menyatu dan realistis seperti foto asli.',
-    minImages: 2,
-    maxImages: 5
-  },
-  thumbnail: {
-    id: 'thumbnail',
-    title: 'Foto Miniatur (Thumbnail)',
-    description: 'Buat thumbnail YouTube yang menarik perhatian (Clickbait).',
-    defaultPrompt: 'Buat desain thumbnail YouTube yang dramatis dan menarik perhatian (clickbait style). Gunakan teks besar yang kontras, ekspresi wajah yang emosional, dan warna-warna cerah. Tema: [Jelaskan Topik Video].',
-    minImages: 1,
-    maxImages: 3
-  },
-  expand: {
-    id: 'expand',
-    title: 'Perluas Foto (Outpainting)',
-    description: 'Ubah rasio foto dengan menambahkan area sekeliling secara otomatis.',
-    defaultPrompt: 'Perluas gambar ini secara horizontal/vertikal. Isi area kosong dengan latar belakang yang relevan dan menyatu sempurna dengan gambar asli. Pertahankan gaya visual yang sama.',
-    minImages: 1,
-    maxImages: 1
-  },
-  edit: {
-    id: 'edit',
-    title: 'Edit Foto Magic',
-    description: 'Ubah bagian tertentu dari foto dengan instruksi teks.',
-    defaultPrompt: 'Ubah [Sebutkan Objek] menjadi [Sebutkan Target]. Pertahankan pencahayaan dan gaya asli foto.',
-    minImages: 1,
-    maxImages: 1
-  },
-  removeobj: {
-    id: 'removeobj',
-    title: 'Remove Object',
-    description: 'Hapus objek atau orang yang tidak diinginkan dari foto.',
-    defaultPrompt: 'Hapus [Sebutkan Objek/Orang] dari foto ini. Isi area bekas penghapusan dengan latar belakang yang sesuai agar terlihat bersih dan alami (Inpainting).',
-    minImages: 1,
-    maxImages: 1
-  },
-  removebg: {
-    id: 'removebg',
-    title: 'Remove Background',
-    description: 'Hapus latar belakang foto dan ganti dengan warna putih.',
-    defaultPrompt: 'Hapus latar belakang gambar ini sepenuhnya. Sisakan hanya subjek utama dengan potongan yang sangat rapi (pixel-perfect). Ganti background dengan warna PUTIH POLOS (#FFFFFF).',
-    minImages: 1,
-    maxImages: 1
-  },
-  restore: {
-    id: 'restore',
-    title: 'Restorasi Foto Lama',
-    description: 'Perbaiki foto buram, rusak, atau hitam putih menjadi HD.',
-    defaultPrompt: 'Restorasi foto lama ini agar menjadi tajam (High Definition). Hilangkan noda goresan dan noise. Jika hitam putih, berikan warna yang natural dan realistis (Colorization).',
-    minImages: 1,
-    maxImages: 1
-  },
-  faceswap: {
-    id: 'faceswap',
-    title: 'Face Swap Pro',
-    description: 'Tukar wajah antar foto dengan presisi tinggi.',
-    defaultPrompt: 'Lakukan Face Swap realistis. Ambil wajah dari Foto 1 (Sumber) dan terapkan ke kepala/tubuh pada Foto 2 (Target). Pertahankan ekspresi, pencahayaan, dan tone kulit target.',
-    minImages: 2,
-    maxImages: 2
-  },
-  animate: {
-    id: 'animate',
-    title: 'Hidupkan Foto (Veo)',
-    description: 'Ubah foto diam menjadi video sinematik bergerak.',
-    defaultPrompt: 'Hidupkan foto ini (Animate). Buat gerakan kamera yang halus (Slow Pan/Zoom). Buat elemen alam seperti awan/air/rambut bergerak natural. Pertahankan gaya visual asli foto.',
-    minImages: 1,
-    maxImages: 1,
-    type: 'video'
-  },
-  videofaceswap: {
-    id: 'videofaceswap',
-    title: 'Video Face Swap',
-    description: 'Hidupkan foto wajah menjadi video bergerak.',
-    defaultPrompt: 'Buat video sinematik dari orang di foto ini sedang [Sebutkan Aktivitas, misal: tersenyum dan melambaikan tangan]. Pertahankan identitas wajah agar tetap mirip.',
-    minImages: 1,
-    maxImages: 1,
-    type: 'video'
-  },
-  fitting: {
-    id: 'fitting',
-    title: 'Kamar Pas (Virtual Try-On)',
-    description: 'Coba pakaian pada model secara virtual.',
-    defaultPrompt: 'Pakaikan baju dari Foto 2 ke badan orang di Foto 1. Sesuaikan ukuran, lipatan kain, dan pencahayaan agar terlihat seperti benar-benar dipakai.',
-    minImages: 2,
-    maxImages: 2
-  },
-
-  // STUDIO FOTO AI
-  prewedding: {
-    id: 'prewedding',
-    title: 'Foto Prewedding',
-    description: 'Gabungkan foto Pria & Wanita menjadi foto prewedding estetik.',
-    defaultPrompt: 'Gabungkan subjek Pria (Foto 1) dan Wanita (Foto 2) menjadi satu frame pasangan yang romantis. Posisikan mereka berdampingan atau berpegangan tangan dengan natural. Latar belakang: [Sebutkan Lokasi, misal: Pantai Sunset / Taman Bunga]. Kenakan busana formal/gaun yang serasi. Pencahayaan cinematic, photorealistic 8k.',
-    minImages: 2,
-    maxImages: 2
-  },
-  wedding: {
-    id: 'wedding',
-    title: 'Foto Wedding',
-    description: 'Simulasi pernikahan yang megah.',
-    defaultPrompt: 'Ubah foto ini menjadi foto pernikahan (Wedding) yang megah dan elegan. Subjek mengenakan gaun pengantin/jas formal yang indah. Latar belakang dekorasi pelaminan mewah.',
-    minImages: 1,
-    maxImages: 1
-  },
-  babyborn: {
-    id: 'babyborn',
-    title: 'Baby Born Photography',
-    description: 'Tema fotografi bayi baru lahir (Newborn).',
-    defaultPrompt: 'Ubah foto bayi ini menjadi "Newborn Photography" profesional. Bayi tidur dengan nyaman di dalam keranjang rotan dengan selimut rajut lembut. Pencahayaan studio softbox, tone pastel.',
-    minImages: 1,
-    maxImages: 1
-  },
-  kids: {
-    id: 'kids',
-    title: 'Kids Photography',
-    description: 'Foto studio anak yang ceria dan artistik.',
-    defaultPrompt: 'Foto studio profesional untuk anak. Ekspresi ceria, pencahayaan terang dan tajam. Latar belakang studio abstrak warna-warni atau taman bermain fantasi.',
-    minImages: 1,
-    maxImages: 1
-  },
-  maternity: {
-    id: 'maternity',
-    title: 'Maternity Photo',
-    description: 'Foto kehamilan yang elegan dan menyentuh.',
-    defaultPrompt: 'Foto Maternity (Ibu Hamil) yang elegan dan artistik. Siluet dramatis dengan pencahayaan rim-light, gaun panjang menjuntai, suasana penuh kasih sayang.',
-    minImages: 1,
-    maxImages: 1
-  },
-  umrah: {
-    id: 'umrah',
-    title: 'Foto Umrah / Haji',
-    description: 'Edit foto dengan latar belakang Tanah Suci.',
-    defaultPrompt: 'Edit foto ini seolah-olah subjek sedang berada di Masjidil Haram, Mekkah dengan latar belakang Kaabah yang megah. Subjek mengenakan pakaian Ihram/Muslim yang sopan. Suasana spiritual dan agung.',
-    minImages: 1,
-    maxImages: 1
-  },
-  passphoto: {
-    id: 'passphoto',
-    title: 'Pas Foto Warna',
-    description: 'Buat pas foto formal background merah/biru.',
-    defaultPrompt: 'Ubah foto ini menjadi Pas Foto Formal untuk dokumen. Subjek mengenakan kemeja putih berdasi/jas hitam. Pandangan lurus ke depan. Ganti latar belakang menjadi [MERAH / BIRU].',
-    minImages: 1,
-    maxImages: 1
-  },
-
-  // DESAIN & SENI
-  interior: {
-    id: 'interior',
-    title: 'Desain Interior',
-    description: 'Visualisasi desain ruangan dari foto kosong.',
-    defaultPrompt: 'Desain interior Photorealistic untuk ruangan ini. Gaya: [Minimalis / Industrial / Scandinavian]. Tambahkan furniture modern, pencahayaan warm, dan dekorasi tanaman hias.',
-    minImages: 1,
-    maxImages: 1
-  },
-  exterior: {
-    id: 'exterior',
-    title: 'Desain Eksterior',
-    description: 'Render arsitektur bangunan dari sketsa.',
-    defaultPrompt: 'Render arsitektur Eksterior yang realistis. Ubah sketsa/foto rumah ini menjadi bangunan modern mewah dengan fasad kaca dan kayu. Tambahkan taman yang asri dan pencahayaan pagi hari.',
-    minImages: 1,
-    maxImages: 1
-  },
-  sketch: {
-    id: 'sketch',
-    title: 'Sketsa Gambar',
-    description: 'Ubah foto menjadi sketsa pensil artistik.',
-    defaultPrompt: 'Ubah gambar ini menjadi sketsa pensil tangan yang detail (Hand-drawn Pencil Sketch). Garis-garis halus, shading arsiran, di atas kertas bertekstur. Hitam putih artistik.',
-    minImages: 1,
-    maxImages: 1
-  },
-  caricature: {
-    id: 'caricature',
-    title: 'Art & Karikatur',
-    description: 'Ubah wajah menjadi karikatur 3D lucu.',
-    defaultPrompt: 'An ultra-realistic large head caricature of a man like the uploaded image, wearing a casual outfit. Exaggerated features, Pixar-style rendering, cute and expressive. 3D Render, Octane Render, bright studio lighting.',
-    minImages: 1,
-    maxImages: 1
-  },
-
-  // IMAGINE & FAST
-  imagine: {
-    id: 'imagine',
-    title: 'Buat Gambar (Imagine)',
-    description: 'Buat gambar AI dari teks tanpa perlu upload foto.',
-    defaultPrompt: 'A futuristic city floating in the clouds, cyberpunk aesthetic, neon lights, 8k resolution, cinematic lighting, highly detailed.',
-    minImages: 0,
-    maxImages: 0
-  },
+const FEATURES: Record<string, FeatureConfig> = {
+  // Core
   banana: {
     id: 'banana',
-    title: 'Banana AI (Fast)',
-    description: 'Generasi gambar super cepat (Fast Mode).',
+    title: 'Banana AI',
+    description: 'Generasi gambar dual-mode: Fast (Unlimited) & Pro (High Detail).',
     defaultPrompt: 'A vibrant abstract digital art piece, colorful swirling fluids, high contrast, 4k.',
     minImages: 0,
-    maxImages: 1
+    maxImages: 1,
+    icon: <Zap size={24} />
   },
   veo: {
     id: 'veo',
     title: 'Google Veo 3',
-    description: 'Generasi video sinematik tercanggih.',
-    defaultPrompt: 'A cinematic drone shot of a tropical island, turquoise water, white sand, sunny day, 4k resolution, smooth motion.',
+    description: 'Generasi video sinematik high-fidelity dari teks atau gambar.',
+    defaultPrompt: 'Cinematic drone shot of a futuristic city at sunset, flying cars, neon lights, 4k resolution.',
     minImages: 0,
     maxImages: 1,
-    type: 'video'
+    type: 'video',
+    icon: <Video size={24} />
+  },
+  imagine: {
+    id: 'imagine',
+    title: 'Text to Image',
+    description: 'Ubah imajinasi menjadi gambar nyata dengan instruksi teks.',
+    defaultPrompt: 'A magical forest with glowing mushrooms and fireflies, fantasy art style, 8k.',
+    minImages: 0,
+    maxImages: 0,
+    icon: <ImageIcon size={24} />
+  },
+  
+  // Editing
+  merge: { id: 'merge', title: 'Gabung Foto', description: 'Gabungkan objek dan latar belakang secara seamless.', defaultPrompt: 'Merge these images naturally.', minImages: 2, maxImages: 2, icon: <Layers size={24} /> },
+  thumbnail: { id: 'thumbnail', title: 'Foto Miniatur', description: 'Buat thumbnail YouTube yang menarik.', defaultPrompt: 'YouTube thumbnail, catchy text, expressive face, high contrast.', minImages: 1, maxImages: 1, icon: <Edit3 size={24} /> },
+  expand: { id: 'expand', title: 'Perluas Foto', description: 'Uncrop / Outpainting foto otomatis.', defaultPrompt: 'Expand image surroundings naturally.', minImages: 1, maxImages: 1, icon: <Maximize2 size={24} /> },
+  edit: { id: 'edit', title: 'Magic Edit', description: 'Edit bagian foto dengan instruksi teks.', defaultPrompt: 'Change the background to a beach.', minImages: 1, maxImages: 1, icon: <Edit3 size={24} /> },
+  removeobj: { id: 'removeobj', title: 'Hapus Objek', description: 'Hilangkan objek tidak diinginkan.', defaultPrompt: 'Remove the object.', minImages: 1, maxImages: 1, icon: <Eraser size={24} /> },
+  removebg: { id: 'removebg', title: 'Hapus Background', description: 'Hapus latar belakang foto otomatis.', defaultPrompt: 'Remove background.', minImages: 1, maxImages: 1, icon: <ImageMinus size={24} /> },
+  restore: { id: 'restore', title: 'Restorasi Foto', description: 'Perbaiki foto lama, buram, atau hitam putih.', defaultPrompt: 'Restore and colorize this old photo, high definition.', minImages: 1, maxImages: 1, icon: <Palette size={24} /> },
+  faceswap: { id: 'faceswap', title: 'Face Swap', description: 'Ganti wajah dalam foto secara realistis.', defaultPrompt: 'Swap face from image 1 to body in image 2.', minImages: 2, maxImages: 2, icon: <Users size={24} /> },
+  videofaceswap: { id: 'videofaceswap', title: 'Video Face Swap', description: 'Ganti wajah dalam video.', defaultPrompt: 'Swap face.', minImages: 1, maxImages: 1, type: 'video', icon: <Film size={24} /> },
+  animate: { id: 'animate', title: 'Hidupkan Foto', description: 'Animasikan foto diam menjadi video.', defaultPrompt: 'Animate this photo, camera zoom in, cinematic movement.', minImages: 1, maxImages: 1, type: 'video', icon: <Video size={24} /> },
+  fitting: { id: 'fitting', title: 'Kamar Pas AI', description: 'Virtual try-on pakaian.', defaultPrompt: 'Fit the dress from image 2 onto the person in image 1.', minImages: 2, maxImages: 2, icon: <Scissors size={24} /> },
+  
+  // TTS Feature
+  tts: { 
+    id: 'tts', 
+    title: 'Text to Speech', 
+    description: 'Ubah teks menjadi suara manusia (AI Voiceover) yang natural.', 
+    defaultPrompt: 'Selamat datang di INDIGITAL STUDIO. Saya siap membantu membacakan narasi video Anda dengan suara yang jernih dan profesional.', 
+    minImages: 0, 
+    maxImages: 0, 
+    type: 'audio',
+    icon: <AudioLines size={24} /> 
   },
 
-  // BISNIS & PROMOSI
-  fotomodel: {
-    id: 'fotomodel',
-    title: 'Foto Model AI',
-    description: 'Model AI mengenakan produk fashion Anda.',
-    defaultPrompt: 'Foto editorial model studio fotorealistis. Subjek utama: Seorang wanita muda berusia pertengahan 20-an, berwajah khas Indonesia-Melayu. Rambut hitam legam, lurus, panjang sebahu, ditata rapi dengan belahan pinggir. Ekspresi wajah tenang, tatapan mata intens langsung ke kamera, dengan sedikit senyum tipis yang elegan. Mengenakan [Deskripsikan Baju Produk].',
-    minImages: 0, // Can be 0 for text-only model gen
-    maxImages: 1
-  },
-  product: {
-    id: 'product',
-    title: 'Foto Produk',
-    description: 'Ubah foto produk biasa menjadi foto studio profesional.',
-    defaultPrompt: 'Tempatkan produk ini di atas podium marmer putih dengan pencahayaan studio premium. Tambahkan elemen dekorasi minimalis seperti daun monstera di latar belakang. Bokeh halus, tajam, dan elegan.',
-    minImages: 1,
-    maxImages: 1
-  },
-  fashion: {
-    id: 'fashion',
-    title: 'Foto Fashion',
-    description: 'Katalog fashion profesional dengan model AI.',
-    defaultPrompt: 'Foto katalog fashion full-body. Model profesional mengenakan pakaian ini. Pose dinamis namun elegan. Latar belakang studio abu-abu polos atau jalanan kota modern (Streetwear).',
-    minImages: 1,
-    maxImages: 1
-  },
-  mockup: {
-    id: 'mockup',
-    title: 'Buat Mockup',
-    description: 'Terapkan desain logo/poster ke objek nyata.',
-    defaultPrompt: 'Terapkan desain ini secara realistis ke permukaan objek pada foto kedua. Sesuaikan perspektif, bayangan, dan tekstur agar terlihat bersih dan alami (Mockup).',
-    minImages: 2,
-    maxImages: 2
-  },
-  banner: {
-    id: 'banner',
-    title: 'Buat Banner',
-    description: 'Desain banner promosi otomatis.',
-    defaultPrompt: 'Buat desain banner web promosi lebar. Gunakan produk ini sebagai elemen utama di sebelah kanan. Tambahkan teks placeholder "BIG SALE" di sebelah kiri. Latar belakang gradasi modern.',
-    minImages: 1,
-    maxImages: 1
-  },
-  carousel: {
-    id: 'carousel',
-    title: 'Buat Carousel',
-    description: 'Konten media sosial berurutan (Carousel).',
-    defaultPrompt: 'Buat desain slide carousel Instagram yang edukatif dan visual. Gunakan palet warna brand yang konsisten.',
-    minImages: 1,
-    maxImages: 3
-  },
-  flayer: {
-    id: 'flayer',
-    title: 'Desain Flyer',
-    description: 'Desain selebaran promosi siap cetak.',
-    defaultPrompt: 'Buat desain Flyer promosi ukuran A4. Tata letak profesional, headline menarik di atas, gambar produk di tengah, dan detail kontak di bawah. Gaya modern dan bersih.',
-    minImages: 1,
-    maxImages: 1
-  },
+  // Studio
+  prewedding: { id: 'prewedding', title: 'Foto Prewedding', description: 'Simulasi foto prewedding.', defaultPrompt: 'Romantic prewedding photo, sunset beach.', minImages: 2, maxImages: 2, icon: <Heart size={24} /> },
+  wedding: { id: 'wedding', title: 'Foto Wedding', description: 'Simulasi foto pernikahan mewah.', defaultPrompt: 'Luxury wedding photo.', minImages: 1, maxImages: 1, icon: <Users size={24} /> },
+  babyborn: { id: 'babyborn', title: 'Baby Born', description: 'Foto bayi baru lahir artistik.', defaultPrompt: 'Newborn photography, cute baby, soft lighting.', minImages: 1, maxImages: 1, icon: <Baby size={24} /> },
+  kids: { id: 'kids', title: 'Kids Foto', description: 'Foto anak-anak ceria.', defaultPrompt: 'Happy kid portrait.', minImages: 1, maxImages: 1, icon: <Smile size={24} /> },
+  maternity: { id: 'maternity', title: 'Maternity', description: 'Foto kehamilan elegan.', defaultPrompt: 'Maternity photoshoot, elegant.', minImages: 1, maxImages: 1, icon: <User size={24} /> },
+  umrah: { id: 'umrah', title: 'Umrah/Haji', description: 'Foto tema tanah suci.', defaultPrompt: 'Person in Mecca, Kaaba background.', minImages: 1, maxImages: 1, icon: <Moon size={24} /> },
+  passphoto: { id: 'passphoto', title: 'Pas Foto', description: 'Buat pas foto formal otomatis.', defaultPrompt: 'Formal passport photo.', minImages: 1, maxImages: 1, icon: <UserSquare size={24} /> },
 
-  // DOWNLOADERS
-  youtube: {
-    id: 'youtube',
-    title: 'Youtube Downloader',
-    description: 'Download video Youtube kualitas tinggi.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'downloader'
-  },
-  tiktok: {
-    id: 'tiktok',
-    title: 'Tiktok Downloader',
-    description: 'Download video Tiktok tanpa watermark.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'downloader'
-  },
-  instagram: {
-    id: 'instagram',
-    title: 'Instagram Downloader',
-    description: 'Download Foto/Video/Reels Instagram.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'downloader'
-  },
-  facebook: {
-    id: 'facebook',
-    title: 'Facebook Downloader',
-    description: 'Download video dari Facebook.',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'downloader'
-  },
-  twitter: {
-    id: 'twitter',
-    title: 'X / Twitter Downloader',
-    description: 'Download video/media dari X (Twitter).',
-    defaultPrompt: '',
-    minImages: 0,
-    maxImages: 0,
-    type: 'downloader'
-  }
+  // Design
+  interior: { id: 'interior', title: 'Desain Interior', description: 'Visualisasi interior ruangan.', defaultPrompt: 'Modern minimalist living room interior design.', minImages: 1, maxImages: 1, icon: <HomeIcon size={24} /> },
+  exterior: { id: 'exterior', title: 'Desain Eksterior', description: 'Visualisasi eksterior bangunan.', defaultPrompt: 'Modern house exterior facade.', minImages: 1, maxImages: 1, icon: <LayoutTemplate size={24} /> },
+  sketch: { id: 'sketch', title: 'Sketsa Gambar', description: 'Ubah foto jadi sketsa.', defaultPrompt: 'Pencil sketch art style.', minImages: 1, maxImages: 1, icon: <PenTool size={24} /> },
+  caricature: { id: 'caricature', title: 'Art & Karikatur', description: 'Ubah wajah jadi karikatur 3D.', defaultPrompt: '3D caricature, pixar style, funny big head.', minImages: 1, maxImages: 1, icon: <Palette size={24} /> },
+
+  // Biz
+  fotomodel: { id: 'fotomodel', title: 'Foto Model AI', description: 'Generate model untuk produk Anda.', defaultPrompt: 'Professional fashion model wearing this product.', minImages: 1, maxImages: 1, icon: <UserCheck size={24} /> },
+  product: { id: 'product', title: 'Foto Produk', description: 'Foto produk studio quality.', defaultPrompt: 'Professional product photography, studio lighting.', minImages: 1, maxImages: 1, icon: <ShoppingBag size={24} /> },
+  fashion: { id: 'fashion', title: 'Foto Fashion', description: 'Katalog fashion profesional.', defaultPrompt: 'Fashion catalog shoot.', minImages: 1, maxImages: 1, icon: <Shirt size={24} /> },
+  mockup: { id: 'mockup', title: 'Buat Mockup', description: 'Mockup logo atau branding.', defaultPrompt: 'Logo mockup on a wall.', minImages: 1, maxImages: 1, icon: <LayoutTemplate size={24} /> },
+  banner: { id: 'banner', title: 'Buat Banner', description: 'Desain banner promosi.', defaultPrompt: 'Promotional banner design.', minImages: 1, maxImages: 1, icon: <Type size={24} /> },
+  carousel: { id: 'carousel', title: 'Buat Carousel', description: 'Desain konten carousel.', defaultPrompt: 'Instagram carousel design.', minImages: 1, maxImages: 1, icon: <Columns size={24} /> },
+  flayer: { id: 'flayer', title: 'Desain Flyer', description: 'Desain flyer/brosur.', defaultPrompt: 'Marketing flyer design.', minImages: 1, maxImages: 1, icon: <FileText size={24} /> },
+
+  // Downloaders
+  youtube: { id: 'youtube', title: 'Youtube Downloader', description: 'Download video Youtube.', defaultPrompt: '', minImages: 0, maxImages: 0, type: 'downloader', icon: <Youtube size={24} /> },
+  tiktok: { id: 'tiktok', title: 'Tiktok Downloader', description: 'Download video Tiktok no-watermark.', defaultPrompt: '', minImages: 0, maxImages: 0, type: 'downloader', icon: <Video size={24} /> },
+  instagram: { id: 'instagram', title: 'Instagram Downloader', description: 'Download Reels/Story Instagram.', defaultPrompt: '', minImages: 0, maxImages: 0, type: 'downloader', icon: <Instagram size={24} /> },
+  facebook: { id: 'facebook', title: 'Facebook Downloader', description: 'Download video Facebook.', defaultPrompt: '', minImages: 0, maxImages: 0, type: 'downloader', icon: <Facebook size={24} /> },
+  twitter: { id: 'twitter', title: 'X Downloader', description: 'Download video X/Twitter.', defaultPrompt: '', minImages: 0, maxImages: 0, type: 'downloader', icon: <Twitter size={24} /> },
 };
 
-// --- TYPEWRITER COMPONENT ---
-const Typewriter = ({ text, delay = 50, infinite = true }: { text: string; delay?: number, infinite?: boolean }) => {
-  const [currentText, setCurrentText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-
-    if (currentIndex < text.length) {
-      timeout = setTimeout(() => {
-        setCurrentText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }, delay);
-    } else if (infinite) {
-      // Wait a bit then reset
-      timeout = setTimeout(() => {
-        setCurrentIndex(0);
-        setCurrentText('');
-      }, 3000); // 3 seconds pause before repeating
-    }
-
-    return () => clearTimeout(timeout);
-  }, [currentIndex, delay, infinite, text]);
-
-  return <span className="text-white">{currentText}</span>;
-};
-
-// --- DASHBOARD COMPONENT ---
-const Dashboard = ({ onNavigate }: { onNavigate: (mode: FeatureMode) => void }) => {
-  const FeatureCard = ({ id, icon, title, desc, gradient, delay }: any) => (
-    <button 
-      onClick={() => onNavigate(id)}
-      className="group relative overflow-hidden bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 text-left hover:border-emerald-500/50 transition-all duration-300 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl hover:shadow-emerald-900/20 animate-in zoom-in fill-mode-backwards"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className={`absolute top-0 right-0 p-20 ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-3xl rounded-full translate-x-10 -translate-y-10`}></div>
-      
-      <div className="w-14 h-14 bg-slate-50 dark:bg-white/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-slate-700 dark:text-white shadow-sm border border-slate-100 dark:border-white/5">
-        {icon}
-      </div>
-      
-      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-        {title}
-      </h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-        {desc}
-      </p>
-      
-      <div className="mt-6 flex items-center text-sm font-bold text-emerald-600 dark:text-emerald-500 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-        Coba Sekarang <ArrowRight size={16} className="ml-2" />
-      </div>
-    </button>
-  );
-
-  return (
-    <div className="max-w-7xl mx-auto space-y-12 pb-20">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-[#0c0c0e] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-600/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none"></div>
-         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/10 blur-[100px] rounded-full mix-blend-screen pointer-events-none"></div>
-         
-         <div className="relative z-10 flex flex-col md:flex-row items-center p-8 md:p-16 gap-12">
-            <div className="flex-1 space-y-8">
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-                  <Activity size={14} /> System Online V3.1
-               </div>
-               
-               <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-none">
-                  Andri AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Pro</span>
-               </h1>
-               
-               <div className="text-lg text-slate-400 leading-relaxed max-w-xl h-24">
-                  <Typewriter 
-                    text="Enterprise-grade Generative AI Platform untuk advanced photo manipulation, next-level graphic design, dan cinematic video rendering." 
-                    delay={30}
-                  />
-               </div>
-               
-               <div className="flex flex-col gap-1">
-                  <p className="text-sm text-emerald-500 font-mono">Powered by Google Gemini 2.5 + Veo latest build.</p>
-                  <p className="text-xs text-slate-500 font-mono">Engineered & maintained by Andri Waskitho.</p>
-               </div>
-
-               <div className="flex gap-4 pt-4">
-                  <button onClick={() => onNavigate('merge')} className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center gap-2">
-                     <Layers size={20} /> Mulai Gabung Foto
-                  </button>
-                  <button onClick={() => onNavigate('imagine')} className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-2xl transition-all hover:scale-105 flex items-center gap-2">
-                     <Image size={20} /> Buat Gambar (Imagine)
-                  </button>
-               </div>
-            </div>
-            
-            <div className="w-full md:w-5/12 h-96 flex items-center justify-center relative">
-               <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] to-transparent z-20"></div>
-               {/* @ts-ignore */}
-               <dotlottie-wc 
-                  src="https://lottie.host/5a41cfbe-1d43-4e11-a3c3-0ae05bdc2ce9/Cc9HVCmP3t.lottie" 
-                  loop 
-                  autoplay 
-                  style={{ width: '100%', height: '100%', transform: 'scale(1.2)' }}
-               ></dotlottie-wc>
-            </div>
-         </div>
-
-         <div className="border-t border-white/5 bg-black/20 p-3 flex gap-8 overflow-hidden whitespace-nowrap text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
-            <div className="animate-marquee flex gap-8">
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> GEMINI 3 PRO ENGINE ACTIVE</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> VEO VIDEO RENDER READY</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> GPU CLUSTER OPTIMIZED</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> LATENCY: 12ms</span>
-               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> SECURE CONNECTION</span>
-            </div>
-         </div>
-      </div>
-
-      <div>
-         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-2">
-            <Zap size={24} className="text-yellow-500" /> Fitur Unggulan
-         </h2>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FeatureCard 
-               id="chatbot"
-               title="AI Chatbot Assistant"
-               desc="Tanya jawab cerdas dengan Gemini 3 Pro."
-               icon={<MessageSquare size={24} />}
-               gradient="bg-blue-500"
-               delay={100}
-            />
-            <FeatureCard 
-               id="imagine"
-               title="Buat Gambar (Imagine)"
-               desc="Buat gambar AI dari teks tanpa perlu upload foto."
-               icon={<Image size={24} />}
-               gradient="bg-purple-500"
-               delay={200}
-            />
-            <FeatureCard 
-               id="veo"
-               title="Google Veo 3"
-               desc="Generasi video sinematik tercanggih."
-               icon={<Video size={24} />}
-               gradient="bg-red-500"
-               delay={300}
-            />
-            <FeatureCard 
-               id="faceswap"
-               title="Face Swap Pro"
-               desc="Tukar wajah antar foto dengan presisi tinggi."
-               icon={<Users size={24} />}
-               gradient="bg-emerald-500"
-               delay={400}
-            />
-         </div>
-      </div>
-
-      <div className="space-y-8">
-         <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-               <Palette size={24} className="text-purple-500" /> Galeri Inspirasi AI
-            </h2>
-         </div>
-         
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[500px]">
-            <div className="md:col-span-1 h-full relative group overflow-hidden rounded-3xl cursor-pointer">
-               <img 
-                  src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" 
-                  alt="Showcase 1" 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-               />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-8 flex flex-col justify-end">
-                  <h3 className="text-white font-bold text-2xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Abstract 3D Art</h3>
-                  <p className="text-slate-300 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">Generasi seni abstrak dengan detail tinggi.</p>
-               </div>
-            </div>
-
-            <div className="md:col-span-2 grid grid-rows-2 gap-6 h-full">
-               <div className="grid grid-cols-2 gap-6 h-full">
-                   <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
-                      <img 
-                         src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80" 
-                         alt="Fashion" 
-                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-bold tracking-widest border border-white px-4 py-2 rounded-full uppercase text-xs">Neon Fashion</span>
-                       </div>
-                   </div>
-                   <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
-                      <img 
-                         src="https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=600&q=80" 
-                         alt="Holo" 
-                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-bold tracking-widest border border-white px-4 py-2 rounded-full uppercase text-xs">Holographic Flow</span>
-                       </div>
-                   </div>
-               </div>
-               <div className="relative group overflow-hidden rounded-3xl cursor-pointer">
-                   <img 
-                      src="https://images.unsplash.com/photo-1620641788421-7f1c338e61a9?auto=format&fit=crop&w=1200&q=80" 
-                      alt="Tech" 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                   />
-                   <div className="absolute inset-0 bg-gradient-to-l from-black/80 to-transparent p-8 flex flex-col justify-center items-end text-right">
-                       <h3 className="text-white font-bold text-2xl">Future Tech</h3>
-                       <p className="text-slate-300 text-sm mt-1">Visualisasi data dan teknologi masa depan.</p>
-                   </div>
-               </div>
-            </div>
-         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-slate-200 dark:border-white/5">
-         <div className="space-y-4">
-            <h3 className="text-emerald-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Camera size={14}/> Studio Suite</h3>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-               <li onClick={() => onNavigate('prewedding')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Foto Prewedding</li>
-               <li onClick={() => onNavigate('wedding')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Foto Wedding</li>
-               <li onClick={() => onNavigate('babyborn')} className="cursor-pointer hover:text-emerald-500 flex items-center gap-2"><Heart size={12}/> Baby Born</li>
-            </ul>
-         </div>
-         <div className="space-y-4">
-            <h3 className="text-blue-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Briefcase size={14}/> Business Tools</h3>
-             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-               <li onClick={() => onNavigate('product')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Foto Produk</li>
-               <li onClick={() => onNavigate('fashion')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Foto Fashion</li>
-               <li onClick={() => onNavigate('banner')} className="cursor-pointer hover:text-blue-500 flex items-center gap-2"><Briefcase size={12}/> Buat Banner</li>
-            </ul>
-         </div>
-         <div className="space-y-4">
-            <h3 className="text-purple-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><Music size={14}/> Media Download</h3>
-             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-               <li onClick={() => onNavigate('youtube')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Youtube size={12}/> Youtube</li>
-               <li onClick={() => onNavigate('tiktok')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Video size={12}/> Tiktok</li>
-               <li onClick={() => onNavigate('instagram')} className="cursor-pointer hover:text-purple-500 flex items-center gap-2"><Instagram size={12}/> Instagram</li>
-            </ul>
-         </div>
-      </div>
-    </div>
-  );
-};
-
-
-// --- MAIN APP COMPONENT ---
-const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentMode, setCurrentMode] = useState<FeatureMode>('home');
-  const [theme, setTheme] = useState('light');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const getThemeStyle = () => {
-     switch(theme) {
-        case 'light': return 'bg-white text-slate-900';
-        case 'dark': return 'bg-[#09090b] text-white';
-        case 'purple': return 'bg-gradient-to-br from-[#1a0b2e] via-[#130722] to-[#0f0518] text-white';
-        case 'ocean': return 'bg-gradient-to-br from-[#0f172a] via-[#0c2e42] to-[#082f49] text-white';
-        case 'emerald': return 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#065f46] text-white';
-        case 'sunset': return 'bg-gradient-to-br from-[#451a03] via-[#7c2d12] to-[#9a3412] text-white';
-        case 'midnight': return 'bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] text-white';
-        case 'cyberpunk': return 'bg-gradient-to-br from-[#2e0225] via-[#4a044e] to-[#701a75] text-white';
-        default: return 'bg-[#09090b] text-white';
-     }
-  };
+  const [theme, setTheme] = useState('luxury');
+  const [viewState, setViewState] = useState<'landing' | 'login' | 'app' | 'privacy' | 'terms' | 'contact'>('landing');
+  const [recentHistory, setRecentHistory] = useState<HistoryItem[]>([]);
+  const [greeting, setGreeting] = useState('');
+  const [userProfile, setUserProfile] = useState({ fullName: 'Superadmin' });
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
+    const auth = localStorage.getItem('user_auth');
+    if (auth) {
+      setIsAuthenticated(true);
+      setViewState('app');
     }
-  }, [theme]);
+    
+    // Greeting Logic
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Selamat Pagi');
+    else if (hour < 18) setGreeting('Selamat Siang');
+    else setGreeting('Selamat Malam');
+
+    // Load Profile Name
+    const savedProfile = localStorage.getItem('user_profile');
+    if(savedProfile) {
+        try {
+            setUserProfile(JSON.parse(savedProfile));
+        } catch(e) {}
+    }
+
+  }, []);
+
+  // Load recent history when entering home
+  useEffect(() => {
+    if (currentMode === 'home') {
+        const saved = localStorage.getItem('andri_ai_history');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setRecentHistory(parsed.slice(0, 5));
+            } catch (e) {}
+        }
+    }
+  }, [currentMode]);
 
   const handleLogin = (status: boolean) => {
-    setIsLoggedIn(status);
+    if (status) {
+      setIsAuthenticated(true);
+      setViewState('app');
+      localStorage.setItem('user_auth', JSON.stringify({ username: 'andriwaskitho', loggedIn: true }));
+    }
   };
 
-  const handleNavigate = (mode: FeatureMode) => {
-    setCurrentMode(mode);
-    setIsMobileMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setViewState('landing');
+    localStorage.removeItem('user_auth');
+    setCurrentMode('home');
   };
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} />;
+  if (viewState === 'landing') {
+    return <LandingPage onGetStarted={() => setViewState('login')} onNavigate={(page) => setViewState(page)} />;
+  }
+
+  if (viewState === 'privacy') return <PrivacyPolicy onBack={() => setViewState('landing')} />;
+  if (viewState === 'terms') return <TermsOfService onBack={() => setViewState('landing')} />;
+  if (viewState === 'contact') return <ContactSupport onBack={() => setViewState('landing')} />;
+
+  if (viewState === 'login') {
+    return <Login onLogin={handleLogin} onBack={() => setViewState('landing')} />;
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 font-['Inter'] ${getThemeStyle()}`}>
-      
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#09090b] z-40 flex items-center justify-between px-4 border-b border-white/10 shadow-lg">
-          <div className="flex items-center gap-2">
-             <Sparkles className="text-emerald-500 w-6 h-6" />
-             <span className="text-white font-bold text-lg">Andri AI Pro</span>
-          </div>
-          <button onClick={() => setIsMobileMenuOpen(true)} className="text-white p-2">
-             <Menu size={24} />
-          </button>
-      </div>
-
+    <div className={`flex min-h-screen bg-emerald-50/30 dark:bg-black font-['Inter'] ${theme === 'dark' || theme === 'cyberpunk' ? 'dark' : ''}`}>
       <Sidebar 
         currentMode={currentMode} 
-        onNavigate={handleNavigate} 
-        onLogout={() => setIsLoggedIn(false)}
-        className="z-50"
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
+        onNavigate={setCurrentMode} 
+        onLogout={handleLogout}
+        isLuxury={theme === 'luxury'}
+        currentTheme={theme}
+        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
       />
+      
+      <main className="flex-1 ml-0 md:ml-72 p-6 overflow-x-hidden transition-colors duration-300">
+        {currentMode === 'home' ? (
+           <div className="max-w-7xl mx-auto space-y-10 pt-4 pb-20 animate-in fade-in duration-500">
+              
+              {/* Hero Greeting Section */}
+              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 shadow-2xl p-8 md:p-12 text-white border border-white/10">
+                  {/* Decorative Elements */}
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none mix-blend-overlay"></div>
+                  <div className="absolute bottom-0 left-20 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl pointer-events-none mix-blend-overlay"></div>
+                  
+                  <div className="relative z-10">
+                      <div className="flex items-center gap-2 text-emerald-100 font-bold uppercase tracking-wider text-xs mb-3">
+                          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                          System Operational
+                      </div>
+                      <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight leading-tight">
+                          {greeting}, <br/> {userProfile.fullName}.
+                      </h1>
+                      <p className="text-emerald-50 max-w-xl text-lg leading-relaxed font-light mb-8">
+                          Selamat datang kembali di INDIGITAL STUDIO. Akses fitur generative AI Gemini 3 Pro & Veo untuk mempercepat kreativitas Anda.
+                      </p>
+                      <div className="flex flex-wrap gap-4">
+                          <button 
+                            onClick={() => setCurrentMode('imagine')} 
+                            className="bg-white text-emerald-800 px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-black/10 hover:bg-emerald-50 hover:scale-105 transition-all flex items-center gap-2"
+                          >
+                              <ImageIcon size={20} /> Buat Gambar
+                          </button>
+                          <button 
+                            onClick={() => setCurrentMode('veo')} 
+                            className="bg-emerald-800/40 hover:bg-emerald-800/60 text-white border border-white/20 px-8 py-3.5 rounded-2xl font-bold transition-all backdrop-blur-md flex items-center gap-2"
+                          >
+                              <Video size={20} /> Buat Video
+                          </button>
+                      </div>
+                  </div>
+              </div>
 
-      <main className={`transition-all duration-300 pt-20 md:pt-8 px-4 md:px-8 pb-8 md:ml-72 min-h-screen flex flex-col`}>
-        <div className="flex-1">
-            {currentMode === 'home' && <Dashboard onNavigate={handleNavigate} />}
-            
-            {currentMode === 'profile' && <UserProfile />}
-            
-            {currentMode === 'settings' && (
-               <AdminSettings theme={theme} setTheme={setTheme} />
-            )}
-            
-            {currentMode !== 'home' && currentMode !== 'profile' && currentMode !== 'settings' && currentMode !== 'chatbot' && (
-            <ImageMerger feature={FEATURES[currentMode]} />
-            )}
-        </div>
+              {/* Stats Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
+                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Activity size={28} />
+                      </div>
+                      <div>
+                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Server Status</div>
+                          <div className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                              Online <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
+                      <div className="w-14 h-14 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Zap size={28} />
+                      </div>
+                      <div>
+                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Banana Credit</div>
+                          <div className="text-2xl font-bold text-slate-800 dark:text-white">Unlimited</div>
+                      </div>
+                  </div>
+                  <div className="bg-white dark:bg-[#0c0c0e] p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-white/10 flex items-center gap-5 group">
+                      <div className="w-14 h-14 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Layers size={28} />
+                      </div>
+                      <div>
+                          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Kreasi</div>
+                          <div className="text-2xl font-bold text-slate-800 dark:text-white">{recentHistory.length || 0} File</div>
+                      </div>
+                  </div>
+              </div>
 
-        <ChatBot />
+              {/* Quick Actions Grid */}
+              <div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                      <Sparkles className="text-emerald-500" /> Akses Cepat
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                          { id: 'banana', label: 'Banana Fast', desc: 'Instan Image Gen', icon: <Zap size={24} />, color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900/20' },
+                          { id: 'veo', label: 'Google Veo', desc: 'Text to Video', icon: <Video size={24} />, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/20' },
+                          { id: 'faceswap', label: 'Face Swap', desc: 'Ganti Wajah', icon: <Users size={24} />, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/20' },
+                          { id: 'removebg', label: 'Hapus BG', desc: 'Transparent BG', icon: <ImageMinus size={24} />, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/20' },
+                      ].map((item) => (
+                          <button 
+                              key={item.id}
+                              onClick={() => setCurrentMode(item.id as FeatureMode)}
+                              className="group bg-white dark:bg-[#0c0c0e] hover:bg-slate-50 dark:hover:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-lg transition-all text-left flex flex-col justify-between h-40"
+                          >
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.bg} ${item.color} mb-3 group-hover:scale-110 transition-transform`}>
+                                  {item.icon}
+                              </div>
+                              <div>
+                                <span className="font-bold text-lg text-slate-800 dark:text-white block group-hover:text-emerald-600 transition-colors">
+                                    {item.label}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</span>
+                              </div>
+                          </button>
+                      ))}
+                  </div>
+              </div>
 
-        <footer className="mt-20 border-t border-slate-200 dark:border-white/5 pt-8 text-center pb-8">
-           <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-white font-bold text-lg">
-              <Sparkles className="text-emerald-500" size={18} /> Andri AI Pro
+              {/* Recent History */}
+              {recentHistory.length > 0 && (
+                  <div>
+                      <div className="flex justify-between items-end mb-6">
+                          <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                              <Clock className="text-emerald-500" /> Riwayat Terakhir
+                          </h3>
+                          <button onClick={() => setCurrentMode('gallery')} className="text-sm font-bold text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                              Lihat Galeri <ArrowRight size={16} />
+                          </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          {recentHistory.map((item, idx) => (
+                              <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer" onClick={() => setCurrentMode('gallery')}>
+                                  {item.type === 'video' ? (
+                                      <div className="w-full h-full flex items-center justify-center bg-black">
+                                          <Video className="text-white opacity-50 w-12 h-12" />
+                                      </div>
+                                  ) : (
+                                      <img src={item.thumbnail || item.results[0]} alt="Recent" className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" />
+                                  )}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-900/50 backdrop-blur w-fit px-2 py-1 rounded mb-1">{item.mode}</span>
+                                      <div className="flex items-center gap-1 text-slate-300 text-[10px]">
+                                         <Calendar size={10} /> {new Date(item.timestamp).toLocaleDateString()}
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
+
            </div>
-           <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-              Enterprise-grade Generative AI Platform.
-           </p>
-           <p className="text-xs text-slate-400 dark:text-slate-600 font-mono">
-              © {new Date().getFullYear()} Andri Waskitho. All rights reserved.
-           </p>
-        </footer>
+        ) : (
+            <>
+                {currentMode === 'gallery' && <Gallery onNavigate={setCurrentMode} />}
+                {currentMode === 'profile' && <UserProfile />}
+                {currentMode === 'settings' && <AdminSettings theme={theme} setTheme={setTheme} />}
+
+                {FEATURES[currentMode] && (
+                <ImageMerger feature={FEATURES[currentMode]} onNavigate={setCurrentMode} />
+                )}
+            </>
+        )}
       </main>
+
+      <ChatBot />
     </div>
   );
 };

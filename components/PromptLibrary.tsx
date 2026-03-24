@@ -9,35 +9,35 @@ interface PromptLibraryProps {
 
 const PROMPT_COLLECTIONS = [
   {
-    category: "Cinematic & Realistic (Foto Nyata)",
+    category: "Sinematik & Realistis (Foto Nyata)",
     items: [
-      "A cinematic shot of a futuristic cyberpunk city street at night, raining, neon lights reflecting on wet pavement, towering skyscrapers with holographic ads, flying cars, atmosphere of mystery, 8k resolution, shot on Arri Alexa, color graded.",
-      "Hyper-realistic portrait of an old astronaut looking out of a window, reflection of earth on helmet visor, detailed skin texture, dramatic lighting, emotional expression, 85mm lens f/1.8, bokeh background.",
-      "A majestic white tiger resting in a magical bioluminescent forest, glowing plants, fireflies, soft moonlight, ethereal atmosphere, national geographic style photography, incredibly detailed fur."
+      "Sebuah foto sinematik jalanan kota cyberpunk futuristik di malam hari, hujan deras, cahaya neon memantul di jalanan basah, gedung pencakar langit dengan iklan hologram, mobil terbang, suasana misterius, resolusi 8k, diambil dengan kamera Arri Alexa, color graded.",
+      "Potret hyper-realistic seorang astronot tua melihat keluar jendela, pantulan bumi di kaca helm, tekstur kulit sangat detail, pencahayaan dramatis, ekspresi emosional, lensa 85mm f/1.8, latar belakang bokeh.",
+      "Seekor harimau putih agung sedang beristirahat di hutan bioluminescent yang ajaib, tanaman bercahaya, kunang-kunang, cahaya bulan lembut, suasana ethereal, gaya fotografi national geographic, bulu sangat detail."
     ]
   },
   {
-    category: "3D Art & Animation (Kartun/3D)",
+    category: "Seni 3D & Animasi (Kartun/3D)",
     items: [
-      "Cute fluffy baby dragon sitting on a pile of gold coins, Pixar movie style, big expressive eyes, bright vibrant colors, soft studio lighting, 3d render, blender cycles, 4k.",
-      "Isometric view of a cozy gamer room, neon purple and blue lighting, gaming pc setup, posters on wall, detailed clutter, low poly style, soft shadows, warm atmosphere.",
-      "Cyberpunk samurai character design, intricate metallic armor with glowing red circuitry, katana, dynamic pose, Unreal Engine 5 render, ray tracing, volumetric fog, digital art."
+      "Bayi naga lucu berbulu duduk di tumpukan koin emas, gaya film animasi Pixar, mata besar ekspresif, warna cerah dan hidup, pencahayaan studio lembut, render 3d, blender cycles, 4k.",
+      "Tampilan isometrik dari kamar gamer yang nyaman, pencahayaan neon ungu dan biru, setup pc gaming, poster di dinding, detail berantakan yang rapi, gaya low poly, bayangan lembut, suasana hangat.",
+      "Desain karakter samurai cyberpunk, baju besi logam yang rumit dengan sirkuit merah bercahaya, memegang katana, pose dinamis, render Unreal Engine 5, ray tracing, kabut volumetrik, seni digital."
     ]
   },
   {
-    category: "Fashion & Commercial (Produk/Model)",
+    category: "Fashion & Komersial (Produk/Model)",
     items: [
-      "High-fashion editorial shot of a model wearing avant-garde streetwear, futuristic sunglasses, standing in a white minimalist desert, harsh sunlight, sharp shadows, vogue magazine style.",
-      "Professional product photography of a luxury perfume bottle on a black marble podium, water splashes, golden backlighting, elegant and expensive look, 8k resolution.",
-      "Sneaker advertisement mockup, floating shoe, deconstructed parts, colorful background, dynamic motion blur, commercial lighting, high detail."
+      "Foto editorial fashion tingkat tinggi dari seorang model mengenakan streetwear avant-garde, kacamata hitam futuristik, berdiri di gurun minimalis putih, sinar matahari terik, bayangan tajam, gaya majalah vogue.",
+      "Fotografi produk profesional botol parfum mewah di atas podium marmer hitam, percikan air, pencahayaan latar emas, tampilan elegan dan mahal, resolusi 8k.",
+      "Mockup iklan sepatu sneakers, sepatu melayang, bagian-bagian terurai (deconstructed), latar belakang warna-warni, motion blur dinamis, pencahayaan komersial, detail tinggi."
     ]
   },
   {
-    category: "Architecture & Interior (Desain)",
+    category: "Arsitektur & Interior (Desain)",
     items: [
-      "Modern minimalist living room interior, floor-to-ceiling windows with ocean view, beige and white color palette, scandinavian furniture, soft morning sunlight, architectural digest style.",
-      "Futuristic eco-friendly skyscraper covered in vertical gardens, glass facade, drone view, sunset lighting, realistic architectural visualization, corona render.",
-      "Cozy coffee shop interior at night, warm yellow lights, rainy window, wooden textures, steam rising from coffee cup, relaxing atmosphere."
+      "Interior ruang tamu minimalis modern, jendela setinggi langit-langit dengan pemandangan laut, palet warna krem dan putih, furnitur scandinavian, sinar matahari pagi yang lembut, gaya architectural digest.",
+      "Gedung pencakar langit ramah lingkungan futuristik yang tertutup taman vertikal, fasad kaca, pemandangan drone, pencahayaan matahari terbenam, visualisasi arsitektur realistis, render corona.",
+      "Interior kedai kopi yang nyaman di malam hari, lampu kuning hangat, jendela berembun karena hujan, tekstur kayu, uap mengepul dari cangkir kopi, suasana santai."
     ]
   }
 ];

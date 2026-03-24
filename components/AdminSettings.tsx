@@ -1,17 +1,19 @@
 
-import React, { useState, useEffect } from 'react';
-import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Key, Shield, Save, CheckCircle, Activity, Globe, ToggleLeft, ToggleRight, Server, Sun, Moon, Monitor, Palette, ExternalLink, Crown, Database, Download, Upload, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface AdminSettingsProps {
     theme?: string;
     setTheme?: (theme: string) => void;
 }
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme }) => {
+const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'luxury', setTheme }) => {
   const [apiKey, setApiKey] = useState('');
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dataSize, setDataSize] = useState('0 KB');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // 1. Cek LocalStorage dulu (User input)
@@ -28,14 +30,75 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
              setApiKey(process.env.API_KEY);
         }
     }
+    calculateStorageSize();
   }, []);
 
+  const calculateStorageSize = () => {
+      let total = 0;
+      for (const key in localStorage) {
+          if (localStorage.hasOwnProperty(key)) {
+              total += ((localStorage[key].length + key.length) * 2);
+          }
+      }
+      const sizeInKB = total / 1024;
+      setDataSize(sizeInKB > 1024 ? `${(sizeInKB / 1024).toFixed(2)} MB` : `${sizeInKB.toFixed(2)} KB`);
+  };
+
   const handleSave = () => {
-    // Simpan ke LocalStorage agar Service bisa membacanya tanpa perlu build ulang
     localStorage.setItem('SUPERADMIN_API_KEY', apiKey.trim());
-    
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleExportData = () => {
+      const data = {
+          history: localStorage.getItem('andri_ai_history'),
+          favorites: localStorage.getItem('andri_ai_favorites'),
+          profile: localStorage.getItem('user_profile'),
+          voices: localStorage.getItem('andri_ai_custom_voices'),
+          auth: localStorage.getItem('user_auth'), // Optional: include auth or not
+          exportedAt: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Indigital-Backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          try {
+              const json = JSON.parse(event.target?.result as string);
+              if (json.history) localStorage.setItem('andri_ai_history', json.history);
+              if (json.favorites) localStorage.setItem('andri_ai_favorites', json.favorites);
+              if (json.profile) localStorage.setItem('user_profile', json.profile);
+              if (json.voices) localStorage.setItem('andri_ai_custom_voices', json.voices);
+              
+              alert('Data berhasil dipulihkan! Halaman akan dimuat ulang.');
+              window.location.reload();
+          } catch (err) {
+              alert('Gagal membaca file backup. Pastikan format JSON valid.');
+          }
+      };
+      reader.readAsText(file);
+  };
+
+  const handleResetData = () => {
+      if (confirm('PERINGATAN: Ini akan menghapus SEMUA riwayat gambar, favorit, dan pengaturan lokal Anda. Tindakan ini tidak bisa dibatalkan. Lanjutkan?')) {
+          localStorage.removeItem('andri_ai_history');
+          localStorage.removeItem('andri_ai_favorites');
+          localStorage.removeItem('andri_ai_custom_voices');
+          window.location.reload();
+      }
   };
 
   return (
@@ -46,7 +109,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
            <Settings size={32} className="text-emerald-600" />
            Pengaturan Superadmin
          </h2>
-         <p className="text-slate-500">Konfigurasi sistem, manajemen API Key, dan status server.</p>
+         <p className="text-slate-600 dark:text-slate-500">Konfigurasi sistem, manajemen API Key, dan backup data.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -58,82 +121,80 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
           {setTheme && (
               <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5">
-                  <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+                  <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                     <Monitor size={18} className="text-purple-500" /> Tampilan Aplikasi (Theme)
                   </h3>
                 </div>
                 <div className="p-6">
                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <button 
-                        onClick={() => setTheme('light')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'light' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
-                      >
-                         <Sun size={24} />
-                         <span className="font-bold text-xs">Light Mode</span>
+                      <button onClick={() => setTheme('luxury')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'luxury' ? 'border-amber-500 bg-amber-900/20 text-amber-500' : 'border-slate-200 dark:border-slate-700 hover:border-amber-500/50 text-slate-600 dark:text-slate-500'}`}>
+                         <Crown size={24} /> <span className="font-bold text-xs">Luxury Gold</span>
                       </button>
-                      <button 
-                        onClick={() => setTheme('dark')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'dark' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-500'}`}
-                      >
-                         <Moon size={24} />
-                         <span className="font-bold text-xs">Dark Mode</span>
+                      <button onClick={() => setTheme('light')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'light' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-600 dark:text-slate-500'}`}>
+                         <Sun size={24} /> <span className="font-bold text-xs">Light Mode</span>
                       </button>
-                      <button 
-                        onClick={() => setTheme('purple')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'purple' ? 'border-purple-500 bg-purple-900/20 text-purple-300' : 'border-slate-200 dark:border-slate-700 hover:border-purple-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg"></div>
-                         <span className="font-bold text-xs">Purple Gradient</span>
+                      <button onClick={() => setTheme('dark')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'dark' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-200 text-slate-600 dark:text-slate-500'}`}>
+                         <Moon size={24} /> <span className="font-bold text-xs">Dark Mode</span>
                       </button>
-                      
-                       <button 
-                        onClick={() => setTheme('ocean')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'ocean' ? 'border-blue-500 bg-blue-900/20 text-blue-300' : 'border-slate-200 dark:border-slate-700 hover:border-blue-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg"></div>
-                         <span className="font-bold text-xs">Ocean Blue</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setTheme('emerald')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'emerald' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-300' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg"></div>
-                         <span className="font-bold text-xs">Emerald Green</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setTheme('sunset')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'sunset' ? 'border-orange-500 bg-orange-900/20 text-orange-300' : 'border-slate-200 dark:border-slate-700 hover:border-orange-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-red-600 shadow-lg"></div>
-                         <span className="font-bold text-xs">Sunset Orange</span>
-                      </button>
-
-                       <button 
-                        onClick={() => setTheme('midnight')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'midnight' ? 'border-indigo-500 bg-indigo-900/20 text-indigo-300' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg border border-white/10"></div>
-                         <span className="font-bold text-xs">Midnight</span>
-                      </button>
-
-                       <button 
-                        onClick={() => setTheme('cyberpunk')}
-                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'cyberpunk' ? 'border-fuchsia-500 bg-fuchsia-900/20 text-fuchsia-300' : 'border-slate-200 dark:border-slate-700 hover:border-fuchsia-500/50 text-slate-500'}`}
-                      >
-                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-lg"></div>
-                         <span className="font-bold text-xs">Cyberpunk</span>
+                      <button onClick={() => setTheme('cyberpunk')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${theme === 'cyberpunk' ? 'border-fuchsia-500 bg-fuchsia-900/20 text-fuchsia-600 dark:text-fuchsia-300' : 'border-slate-200 dark:border-slate-700 hover:border-fuchsia-500/50 text-slate-600 dark:text-slate-500'}`}>
+                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-lg"></div> <span className="font-bold text-xs">Cyberpunk</span>
                       </button>
                    </div>
                 </div>
               </div>
           )}
 
+          {/* Data Management (NEW FEATURE) */}
+          <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Database size={18} className="text-blue-500" /> Manajemen Data
+              </h3>
+              <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-white/10 px-2 py-1 rounded">
+                  Used: {dataSize}
+              </span>
+            </div>
+            <div className="p-6 space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex gap-3">
+                    <Activity className="shrink-0" size={20} />
+                    <p>
+                        Aplikasi ini menyimpan data secara lokal di browser Anda. Lakukan <strong>Export Backup</strong> secara berkala agar data galeri Anda aman atau untuk dipindahkan ke perangkat lain.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <button 
+                        onClick={handleExportData}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-white/5 transition-all gap-2 group"
+                    >
+                        <Download size={24} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold text-sm text-slate-700 dark:text-slate-300">Export Backup</span>
+                    </button>
+
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-white/5 transition-all gap-2 group"
+                    >
+                        <Upload size={24} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold text-sm text-slate-700 dark:text-slate-300">Import Restore</span>
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleImportData} className="hidden" accept=".json" />
+
+                    <button 
+                        onClick={handleResetData}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all gap-2 group"
+                    >
+                        <Trash2 size={24} className="text-red-500 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold text-sm text-red-600 dark:text-red-400">Reset Data</span>
+                    </button>
+                </div>
+            </div>
+          </div>
+
           {/* API Key Management */}
           <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
             <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 flex justify-between items-center">
-              <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <Key size={18} className="text-amber-500" /> API Configuration
               </h3>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${apiKey ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
@@ -147,7 +208,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
                   type={showKey ? "text" : "password"} 
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full p-3 pr-24 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-600 dark:text-slate-300 font-mono text-sm bg-white dark:bg-black/20"
+                  className="w-full p-3 pr-24 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 dark:text-slate-200 font-mono text-sm bg-white dark:bg-black/20"
                   placeholder="Paste AIzaSy... here"
                 />
                 <button 
@@ -158,52 +219,20 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
                 </button>
               </div>
               <div className="mt-4 flex flex-wrap gap-4 items-center justify-between">
-                <p className="text-xs text-slate-400 max-w-sm">
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
                   Kunci API disimpan di Browser (LocalStorage). Gunakan API Key dari <strong>Google AI Studio</strong>.
                 </p>
-                <a 
-                  href="https://aistudio.google.com/app/apikey" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs flex items-center gap-1 text-blue-500 hover:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors border border-blue-100 dark:border-blue-900/30"
-                >
-                  <ExternalLink size={12} /> Dapatkan API Key Gratis
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* System Control */}
-          <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-white/5">
-              <h3 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
-                <Shield size={18} className="text-blue-500" /> System Control
-              </h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/5">
-                <div>
-                  <h4 className="font-medium text-slate-800 dark:text-slate-200">Maintenance Mode</h4>
-                  <p className="text-xs text-slate-500">Nonaktifkan akses user untuk sementara.</p>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleSave}
+                        className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all text-sm"
+                    >
+                        {saved ? <CheckCircle size={16} /> : <Save size={16} />}
+                        {saved ? 'Tersimpan!' : 'Simpan'}
+                    </button>
                 </div>
-                <button 
-                  onClick={() => setIsMaintenanceMode(!isMaintenanceMode)}
-                  className={`text-2xl transition-colors ${isMaintenanceMode ? 'text-emerald-500' : 'text-slate-300'}`}
-                >
-                  {isMaintenanceMode ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                </button>
               </div>
             </div>
-          </div>
-
-          <div className="flex justify-end">
-             <button 
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95"
-             >
-                {saved ? <CheckCircle size={20} /> : <Save size={20} />}
-                {saved ? 'Tersimpan!' : 'Simpan Konfigurasi'}
-             </button>
           </div>
 
         </div>
@@ -243,13 +272,13 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
            </div>
 
            <div className="bg-white dark:bg-[#0c0c0e] rounded-xl shadow-sm border border-slate-200 dark:border-white/10 p-6">
-              <h3 className="font-bold text-slate-700 dark:text-white mb-4 flex items-center gap-2">
+              <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                  <Server size={18} className="text-slate-400" /> System Info
               </h3>
-              <div className="space-y-3 text-sm text-slate-500">
+              <div className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
                  <div className="flex justify-between">
                     <span>App Version</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">v3.1.0 (Pro)</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">v3.2.0 (Pro)</span>
                  </div>
                  <div className="flex justify-between">
                     <span>Engine</span>
@@ -260,8 +289,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ theme = 'dark', setTheme 
                     <span className="font-medium text-slate-700 dark:text-slate-300">Veo-2.5-Preview</span>
                  </div>
                  <div className="flex justify-between">
-                    <span>Build Date</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">Oct 25, 2024</span>
+                    <span>Local Storage</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{dataSize}</span>
                  </div>
               </div>
            </div>

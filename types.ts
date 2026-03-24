@@ -1,22 +1,8 @@
+
 import React from 'react';
 
-// Define the props type locally to ensure React types are resolved correctly from the import
-type DotLottieWCProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-  src: string;
-  autoplay?: boolean;
-  loop?: boolean;
-  mode?: string;
-  style?: React.CSSProperties;
-}, HTMLElement>;
-
-// Add support for custom web components in JSX
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'dotlottie-wc': DotLottieWCProps;
-    }
-  }
-}
+// Note: Custom web component declaration removed to prevent overwriting global JSX.IntrinsicElements
+// If 'dotlottie-wc' is needed, it should be added via module augmentation without replacing the interface.
 
 export interface UploadedImage {
   id: string;
@@ -29,11 +15,14 @@ export enum AspectRatio {
   LANDSCAPE = '16:9',
   PORTRAIT = '9:16',
   PORTRAIT_4_5 = '4:5', // Instagram Portrait
-  LANDSCAPE_5_4 = '5:4' // Standard Landscape
+  LANDSCAPE_5_4 = '5:4', // Standard Landscape
+  PORTRAIT_3_4 = '3:4',
+  PORTRAIT_4_3 = '4:3'
 }
 
 export type FeatureMode = 
   | 'home'
+  | 'gallery'       
   | 'profile'       
   | 'merge' 
   | 'thumbnail' 
@@ -65,6 +54,7 @@ export type FeatureMode =
   | 'sketch'
   | 'caricature'
   | 'imagine'       
+  | 'tts'
   | 'banana'        
   | 'veo'
   | 'chatbot'       
@@ -75,7 +65,7 @@ export type FeatureMode =
   | 'twitter'
   | 'settings';     
 
-export type FeatureType = 'image' | 'video' | 'tool' | 'downloader' | 'chat';
+export type FeatureType = 'image' | 'video' | 'audio' | 'tool' | 'downloader' | 'chat';
 
 export interface FeatureConfig {
   id: FeatureMode;
